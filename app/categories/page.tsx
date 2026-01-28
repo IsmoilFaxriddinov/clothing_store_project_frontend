@@ -1,4 +1,15 @@
+"use client";
+
+import Link from "next/link";
+
 export default function CategoriesPage() {
+  const categories = [
+    { title: "Pants", slug: "pants", src: "/category-pants.png", color: "bg-yellow-100" },
+    { title: "Shoes", slug: "shoes", src: "/category-shoes.png", color: "bg-green-100" },
+    { title: "Jackets", slug: "jackets", src: "/category-jackets.png", color: "bg-blue-100" },
+    { title: "Accessories", slug: "accessories", src: "/category-accessories.png", color: "bg-pink-100" },
+  ];
+
   return (
     <main className="bg-gradient-to-b from-pink-50 to-blue-50 min-h-screen text-gray-900">
       {/* Hero / Title */}
@@ -14,14 +25,10 @@ export default function CategoriesPage() {
       {/* Categories Grid */}
       <section className="px-6 md:px-16 mb-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { title: "Pants", src: "/category-pants.png", color: "bg-yellow-100" },
-            { title: "Shoes", src: "/category-shoes.png", color: "bg-green-100" },
-            { title: "Jackets", src: "/category-jackets.png", color: "bg-blue-100" },
-            { title: "Accessories", src: "/category-accessories.png", color: "bg-pink-100" },
-          ].map((cat) => (
-            <div
+          {categories.map((cat) => (
+            <Link
               key={cat.title}
+              href={`/categories/products/${cat.slug}`}
               className={`rounded-2xl shadow-md p-6 text-center transform hover:scale-105 transition-all duration-300 hover:shadow-lg flex flex-col items-center cursor-pointer ${cat.color}`}
             >
               <div className="w-28 h-28 rounded-full flex items-center justify-center mb-4 bg-white shadow-inner">
@@ -32,7 +39,7 @@ export default function CategoriesPage() {
                 />
               </div>
               <h3 className="font-semibold text-lg text-gray-900">{cat.title}</h3>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
