@@ -1,13 +1,14 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
-// Har bir category uchun 4 ta mahsulot misoli
+// Har bir category uchun productlar
 const products = [
-  // Pants category
+  // Pants
   {
-    slug: "pants",
+    category: "pants",
+    slug: "red-pants",
     title: "Red Pants",
     price: "$20",
     src: "/product-pants.png",
@@ -15,7 +16,8 @@ const products = [
     sizes: ["S", "M", "L"],
   },
   {
-    slug: "pants",
+    category: "pants",
+    slug: "blue-pants",
     title: "Blue Pants",
     price: "$22",
     src: "/product-pants2.png",
@@ -23,7 +25,8 @@ const products = [
     sizes: ["M", "L", "XL"],
   },
   {
-    slug: "pants",
+    category: "pants",
+    slug: "green-pants",
     title: "Green Pants",
     price: "$25",
     src: "/product-pants3.png",
@@ -31,7 +34,8 @@ const products = [
     sizes: ["S", "M"],
   },
   {
-    slug: "pants",
+    category: "pants",
+    slug: "yellow-pants",
     title: "Yellow Pants",
     price: "$18",
     src: "/product-pants4.png",
@@ -39,9 +43,10 @@ const products = [
     sizes: ["S", "M", "L"],
   },
 
-  // Shoes category
+  // Shoes
   {
-    slug: "shoes",
+    category: "shoes",
+    slug: "red-shoes",
     title: "Red Shoes",
     price: "$30",
     src: "/product-shoes.png",
@@ -49,7 +54,8 @@ const products = [
     sizes: ["M", "L"],
   },
   {
-    slug: "shoes",
+    category: "shoes",
+    slug: "blue-shoes",
     title: "Blue Shoes",
     price: "$35",
     src: "/product-shoes2.png",
@@ -57,7 +63,8 @@ const products = [
     sizes: ["S", "M", "L"],
   },
   {
-    slug: "shoes",
+    category: "shoes",
+    slug: "green-shoes",
     title: "Green Shoes",
     price: "$28",
     src: "/product-shoes3.png",
@@ -65,7 +72,8 @@ const products = [
     sizes: ["L", "XL"],
   },
   {
-    slug: "shoes",
+    category: "shoes",
+    slug: "yellow-shoes",
     title: "Yellow Shoes",
     price: "$32",
     src: "/product-shoes4.png",
@@ -73,9 +81,10 @@ const products = [
     sizes: ["S", "M"],
   },
 
-  // Jackets category
+  // Jackets
   {
-    slug: "jackets",
+    category: "jackets",
+    slug: "red-jacket",
     title: "Red Jacket",
     price: "$45",
     src: "/product-jacket.png",
@@ -83,7 +92,8 @@ const products = [
     sizes: ["S", "M", "L"],
   },
   {
-    slug: "jackets",
+    category: "jackets",
+    slug: "blue-jacket",
     title: "Blue Jacket",
     price: "$50",
     src: "/product-jacket2.png",
@@ -91,7 +101,8 @@ const products = [
     sizes: ["M", "L", "XL"],
   },
   {
-    slug: "jackets",
+    category: "jackets",
+    slug: "green-jacket",
     title: "Green Jacket",
     price: "$48",
     src: "/product-jacket3.png",
@@ -99,7 +110,8 @@ const products = [
     sizes: ["S", "M"],
   },
   {
-    slug: "jackets",
+    category: "jackets",
+    slug: "yellow-jacket",
     title: "Yellow Jacket",
     price: "$42",
     src: "/product-jacket4.png",
@@ -107,9 +119,10 @@ const products = [
     sizes: ["S", "M", "L"],
   },
 
-  // Accessories category
+  // Accessories
   {
-    slug: "accessories",
+    category: "accessories",
+    slug: "red-hat",
     title: "Red Hat",
     price: "$15",
     src: "/product-hat.png",
@@ -117,7 +130,8 @@ const products = [
     sizes: ["S", "M"],
   },
   {
-    slug: "accessories",
+    category: "accessories",
+    slug: "blue-hat",
     title: "Blue Hat",
     price: "$18",
     src: "/product-hat2.png",
@@ -125,7 +139,8 @@ const products = [
     sizes: ["M", "L"],
   },
   {
-    slug: "accessories",
+    category: "accessories",
+    slug: "green-scarf",
     title: "Green Scarf",
     price: "$12",
     src: "/product-scarf.png",
@@ -133,7 +148,8 @@ const products = [
     sizes: ["S", "M"],
   },
   {
-    slug: "accessories",
+    category: "accessories",
+    slug: "yellow-scarf",
     title: "Yellow Scarf",
     price: "$14",
     src: "/product-scarf2.png",
@@ -143,21 +159,20 @@ const products = [
 ];
 
 export default function CategoryProductsPage() {
-  const { slug } = useParams();
+  const { slug } = useParams(); // URL dan category slug olamiz
+  const router = useRouter();
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
 
-  // Faqat shu category mahsulotlarini filter
-  const filteredByCategory = products.filter((p) => p.slug === slug);
+  // Faqat shu category mahsulotlarini filter qilamiz
+  const filteredByCategory = products.filter((p) => p.category === slug);
 
   // Size va color filter
   const finalProducts = filteredByCategory.filter((p) => {
     const sizeMatch =
-      selectedSizes.length === 0 ||
-      selectedSizes.some((s) => p.sizes.includes(s));
+      selectedSizes.length === 0 || selectedSizes.some((s) => p.sizes.includes(s));
     const colorMatch =
-      selectedColors.length === 0 ||
-      selectedColors.some((c) => p.colors.includes(c));
+      selectedColors.length === 0 || selectedColors.some((c) => p.colors.includes(c));
     return sizeMatch && colorMatch;
   });
 
@@ -206,9 +221,7 @@ export default function CategoryProductsPage() {
                   )
                 }
                 className={`w-9 h-9 rounded-full border-2 transition ${
-                  selectedColors.includes(c)
-                    ? "border-black scale-110"
-                    : "border-white"
+                  selectedColors.includes(c) ? "border-black scale-110" : "border-white"
                 }`}
                 style={{ backgroundColor: c.toLowerCase() }}
               />
@@ -220,8 +233,11 @@ export default function CategoryProductsPage() {
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {finalProducts.map((product) => (
             <div
-              key={product.title}
-              className="bg-white rounded-2xl shadow-md p-6 text-center hover:shadow-xl transform hover:-translate-y-1 transition"
+              key={product.slug}
+              onClick={() =>
+                router.push(`/categories/products/${product.category}/${product.slug}`)
+              }
+              className="bg-white rounded-2xl shadow-md p-6 text-center hover:shadow-xl transform hover:-translate-y-1 transition cursor-pointer"
             >
               <div className="w-32 h-32 mx-auto mb-4">
                 <img

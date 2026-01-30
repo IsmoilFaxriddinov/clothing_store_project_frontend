@@ -1,4 +1,17 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 export default function Home() {
+  const router = useRouter();
+
+  const categories = [
+    { title: "Pants", src: "/category-pants.png", color: "bg-yellow-100", slug: "pants" },
+    { title: "Shoes", src: "/category-shoes.png", color: "bg-green-100", slug: "shoes" },
+    { title: "Jackets", src: "/category-jackets.png", color: "bg-blue-100", slug: "jackets" },
+    { title: "Accessories", src: "/category-accessories.png", color: "bg-pink-100", slug: "accessories" },
+  ];
+
   return (
     <main className="bg-gradient-to-b from-pink-50 to-blue-50 min-h-screen text-gray-900 flex flex-col">
       {/* Hero Section */}
@@ -11,7 +24,10 @@ export default function Home() {
           <p className="text-lg md:text-xl mb-6 text-gray-700">
             Your favorite place for kids clothing, shoes, and accessories.
           </p>
-          <button className="bg-pink-300 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+          <button
+            onClick={() => router.push("/categories/products/pants")}
+            className="bg-pink-300 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+          >
             Shop Now
           </button>
         </div>
@@ -33,19 +49,11 @@ export default function Home() {
         <h2 className="text-3xl md:text-4xl font-bold mb-8 text-pink-700">
           Categories
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { title: "Pants", src: "/category-pants.png", color: "bg-yellow-100" },
-            { title: "Shoes", src: "/category-shoes.png", color: "bg-green-100" },
-            { title: "Jackets", src: "/category-jackets.png", color: "bg-blue-100" },
-            { title: "Accessories", src: "/category-accessories.png", color: "bg-pink-100" },
-            { title: "Pants", src: "/category-pants.png", color: "bg-yellow-100" },
-            { title: "Shoes", src: "/category-shoes.png", color: "bg-green-100" },
-            { title: "Jackets", src: "/category-jackets.png", color: "bg-blue-100" },
-            { title: "Accessories", src: "/category-accessories.png", color: "bg-pink-100" },
-          ].map((cat, idx) => (
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          {categories.map((cat) => (
             <div
-              key={idx}
+              key={cat.slug}
+              onClick={() => router.push(`/categories/products/${cat.slug}`)}
               className={`rounded-2xl shadow-md p-6 text-center transform hover:scale-105 transition-all duration-300 hover:shadow-lg flex flex-col items-center cursor-pointer ${cat.color}`}
             >
               <div className="w-28 h-28 rounded-full flex items-center justify-center mb-4 bg-white shadow-inner">
