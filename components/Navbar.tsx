@@ -14,14 +14,14 @@ export default function Navbar() {
           <Link href="/" className="hover:text-pink-500 transition-colors">
             Home
           </Link>
-          <Link href="/categories" className="hover:text-pink-500 transition-colors">
-            Categories
+          <Link href="/products" className="hover:text-pink-500 transition-colors">
+            Products
           </Link>
-          <Link href="/about" className="hover:text-pink-500 transition-colors">
-            About
+          <Link href="/checkout" className="hover:text-pink-500 transition-colors">
+            Checkout
           </Link>
-          <Link href="/contact" className="hover:text-pink-500 transition-colors">
-            Contact
+          <Link href="/profile" className="hover:text-pink-500 transition-colors">
+            Profile
           </Link>
         </div>
       </div>

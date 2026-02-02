@@ -25,7 +25,7 @@ export default function Home() {
             Your favorite place for kids clothing, shoes, and accessories.
           </p>
           <button
-            onClick={() => router.push("/categories/products/pants")}
+            onClick={() => router.push("/categories/")}
             className="bg-pink-300 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300"
           >
             Shop Now
