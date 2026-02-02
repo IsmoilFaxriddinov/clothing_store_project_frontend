@@ -2,32 +2,19 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
-// Products data
+// Products data with more details
 const products = [
-  // Pants
-  { category: "pants", slug: "red-pants", title: "Red Pants", price: "$20", src: "/product-pants.png", colors: ["Red", "Blue"], sizes: ["S", "M", "L"] },
-  { category: "pants", slug: "blue-pants", title: "Blue Pants", price: "$22", src: "/product-pants2.png", colors: ["Blue", "Green"], sizes: ["M", "L", "XL"] },
-  { category: "pants", slug: "green-pants", title: "Green Pants", price: "$25", src: "/product-pants3.png", colors: ["Green"], sizes: ["S", "M"] },
-  { category: "pants", slug: "yellow-pants", title: "Yellow Pants", price: "$18", src: "/product-pants4.png", colors: ["Yellow", "Red"], sizes: ["S", "M", "L"] },
-
-  // Shoes
-  { category: "shoes", slug: "red-shoes", title: "Red Shoes", price: "$30", src: "/product-shoes.png", colors: ["Red"], sizes: ["M", "L"] },
-  { category: "shoes", slug: "blue-shoes", title: "Blue Shoes", price: "$35", src: "/product-shoes2.png", colors: ["Blue"], sizes: ["S", "M", "L"] },
-  { category: "shoes", slug: "green-shoes", title: "Green Shoes", price: "$28", src: "/product-shoes3.png", colors: ["Green", "Blue"], sizes: ["L", "XL"] },
-  { category: "shoes", slug: "yellow-shoes", title: "Yellow Shoes", price: "$32", src: "/product-shoes4.png", colors: ["Yellow"], sizes: ["S", "M"] },
-
-  // Jackets
-  { category: "jackets", slug: "red-jacket", title: "Red Jacket", price: "$45", src: "/product-jacket.png", colors: ["Red"], sizes: ["S", "M", "L"] },
-  { category: "jackets", slug: "blue-jacket", title: "Blue Jacket", price: "$50", src: "/product-jacket2.png", colors: ["Blue", "Green"], sizes: ["M", "L", "XL"] },
-  { category: "jackets", slug: "green-jacket", title: "Green Jacket", price: "$48", src: "/product-jacket3.png", colors: ["Green"], sizes: ["S", "M"] },
-  { category: "jackets", slug: "yellow-jacket", title: "Yellow Jacket", price: "$42", src: "/product-jacket4.png", colors: ["Yellow", "Red"], sizes: ["S", "M", "L"] },
-
-  // Accessories
-  { category: "accessories", slug: "red-hat", title: "Red Hat", price: "$15", src: "/product-hat.png", colors: ["Red", "Yellow"], sizes: ["S", "M"] },
-  { category: "accessories", slug: "blue-hat", title: "Blue Hat", price: "$18", src: "/product-hat2.png", colors: ["Blue"], sizes: ["M", "L"] },
-  { category: "accessories", slug: "green-scarf", title: "Green Scarf", price: "$12", src: "/product-scarf.png", colors: ["Green"], sizes: ["S", "M"] },
-  { category: "accessories", slug: "yellow-scarf", title: "Yellow Scarf", price: "$14", src: "/product-scarf2.png", colors: ["Yellow"], sizes: ["M", "L"] },
+  { category: "pants", slug: "red-pants", title: "Red Pants", price: "$20", discount: "$15", rating: 4, src: "/product-pants.png", colors: ["Red", "Blue"], sizes: ["S", "M", "L"], new: true },
+  { category: "pants", slug: "blue-pants", title: "Blue Pants", price: "$22", discount: "$18", rating: 5, src: "/product-pants2.png", colors: ["Blue", "Green"], sizes: ["M", "L", "XL"], new: false },
+  { category: "pants", slug: "green-pants", title: "Green Pants", price: "$25", rating: 4, src: "/product-pants3.png", colors: ["Green"], sizes: ["S", "M"], new: false },
+  { category: "shoes", slug: "red-shoes", title: "Red Shoes", price: "$30", discount: "$25", rating: 5, src: "/product-shoes.png", colors: ["Red"], sizes: ["M", "L"], new: true },
+  { category: "shoes", slug: "blue-shoes", title: "Blue Shoes", price: "$35", rating: 4, src: "/product-shoes2.png", colors: ["Blue"], sizes: ["S", "M", "L"], new: false },
+  { category: "jackets", slug: "green-jacket", title: "Green Jacket", price: "$48", discount: "$42", rating: 5, src: "/product-jacket3.png", colors: ["Green"], sizes: ["S", "M"], new: false },
+  { category: "jackets", slug: "red-jacket", title: "Red Jacket", price: "$45", rating: 4, src: "/product-jacket.png", colors: ["Red"], sizes: ["S", "M", "L"], new: true },
+  { category: "accessories", slug: "red-hat", title: "Red Hat", price: "$15", rating: 4, src: "/product-hat.png", colors: ["Red", "Yellow", "Blue"], sizes: ["S", "M"], new: true },
+  { category: "accessories", slug: "blue-hat", title: "Blue Hat", price: "$18", discount: "$14", rating: 5, src: "/product-hat2.png", colors: ["Blue"], sizes: ["M", "L"], new: false },
 ];
 
 export default function ProductsPage() {
@@ -43,36 +30,26 @@ export default function ProductsPage() {
 
   const finalProducts = products.filter((p) => {
     const slugMatch = !slug || p.category === slug;
-
-    const categoryMatch =
-      selectedCategories.length === 0 ||
-      selectedCategories.includes(p.category);
-
-    const sizeMatch =
-      selectedSizes.length === 0 ||
-      selectedSizes.some((s) => p.sizes.includes(s));
-
-    const colorMatch =
-      selectedColors.length === 0 ||
-      selectedColors.some((c) => p.colors.includes(c));
-
+    const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(p.category);
+    const sizeMatch = selectedSizes.length === 0 || selectedSizes.some((s) => p.sizes.includes(s));
+    const colorMatch = selectedColors.length === 0 || selectedColors.some((c) => p.colors.includes(c));
     return slugMatch && categoryMatch && sizeMatch && colorMatch;
   });
 
   return (
     <main className="bg-gradient-to-b from-pink-50 to-blue-50 min-h-screen text-gray-900 px-6 md:px-16 py-12">
-      <h1 className="text-4xl md:text-5xl font-bold mb-10 text-pink-700">
+      <h1 className="text-4xl md:text-5xl font-extrabold mb-10 text-pink-700">
         {slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : "All"} Products
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {/* FILTER */}
-        <aside className="bg-white rounded-2xl shadow-md p-6 h-fit">
-          {/* CATEGORY */}
+        {/* FILTER PANEL */}
+        <aside className="bg-white rounded-3xl shadow-xl p-6 h-fit sticky top-24">
+          {/* CATEGORY FILTER */}
           <h3 className="font-bold text-lg mb-4 text-pink-700">Category</h3>
           <div className="flex flex-wrap gap-2 mb-6">
             {categories.map((cat) => (
-              <button
+              <motion.button
                 key={cat}
                 onClick={() =>
                   setSelectedCategories(
@@ -81,22 +58,24 @@ export default function ProductsPage() {
                       : [...selectedCategories, cat]
                   )
                 }
-                className={`px-4 py-2 rounded-full border capitalize transition ${
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 rounded-full border capitalize transition font-semibold ${
                   selectedCategories.includes(cat)
-                    ? "bg-pink-400 text-white border-pink-400"
+                    ? "bg-gradient-to-r from-pink-500 to-indigo-500 text-white border-pink-500"
                     : "border-gray-300 hover:bg-pink-100"
                 }`}
               >
                 {cat}
-              </button>
+              </motion.button>
             ))}
           </div>
 
-          {/* SIZE */}
+          {/* SIZE FILTER */}
           <h3 className="font-bold text-lg mb-4 text-pink-700">Size</h3>
           <div className="flex flex-wrap gap-2 mb-6">
             {["S", "M", "L", "XL"].map((size) => (
-              <button
+              <motion.button
                 key={size}
                 onClick={() =>
                   setSelectedSizes(
@@ -105,22 +84,24 @@ export default function ProductsPage() {
                       : [...selectedSizes, size]
                   )
                 }
-                className={`px-4 py-2 rounded-full border transition ${
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 rounded-full border transition font-semibold ${
                   selectedSizes.includes(size)
-                    ? "bg-pink-400 text-white border-pink-400"
+                    ? "bg-gradient-to-r from-pink-500 to-indigo-500 text-white border-pink-500"
                     : "border-gray-300 hover:bg-pink-100"
                 }`}
               >
                 {size}
-              </button>
+              </motion.button>
             ))}
           </div>
 
-          {/* COLOR */}
+          {/* COLOR FILTER */}
           <h3 className="font-bold text-lg mb-4 text-pink-700">Color</h3>
           <div className="flex gap-3 flex-wrap">
             {["Red", "Blue", "Green", "Yellow"].map((c) => (
-              <button
+              <motion.button
                 key={c}
                 onClick={() =>
                   setSelectedColors(
@@ -129,10 +110,10 @@ export default function ProductsPage() {
                       : [...selectedColors, c]
                   )
                 }
-                className={`w-9 h-9 rounded-full border-2 transition ${
-                  selectedColors.includes(c)
-                    ? "border-black scale-110"
-                    : "border-white"
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
+                className={`w-9 h-9 rounded-full border-2 transition shadow-md ${
+                  selectedColors.includes(c) ? "border-black scale-110" : "border-gray-200"
                 }`}
                 style={{ backgroundColor: c.toLowerCase() }}
               />
@@ -141,31 +122,71 @@ export default function ProductsPage() {
         </aside>
 
         {/* PRODUCTS GRID */}
-        <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {finalProducts.map((product) => (
-            <div
+            <motion.div
               key={product.slug}
               onClick={() =>
-                router.push(
-                  `/categories/products/${product.category}/${product.slug}`
-                )
+                router.push(`/categories/products/${product.category}/${product.slug}`)
               }
-              className="bg-white rounded-2xl shadow-md p-6 text-center hover:shadow-xl transform hover:-translate-y-1 transition cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-lg p-6 text-center cursor-pointer overflow-hidden relative group"
             >
-              <div className="w-full h-64 mx-auto mb-4">
+              {product.new && (
+                <span className="absolute top-4 left-4 bg-pink-500 text-white px-3 py-1 text-xs rounded-full font-bold z-10">
+                  NEW
+                </span>
+              )}
+
+              <div className="w-full h-64 mx-auto mb-4 relative">
                 <img
                   src={product.src}
                   alt={product.title}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-inner"
                 />
               </div>
-              <h3 className="font-semibold text-lg mb-1">
-                {product.title}
-              </h3>
-              <p className="text-pink-700 font-bold">
-                {product.price}
-              </p>
-            </div>
+
+              <h3 className="font-bold text-lg mb-2">{product.title}</h3>
+
+              <div className="flex justify-center items-center gap-2 mb-2">
+                <span className="text-pink-700 font-extrabold text-xl">
+                  {product.discount ? product.discount : product.price}
+                </span>
+                {product.discount && (
+                  <span className="text-gray-400 line-through">{product.price}</span>
+                )}
+              </div>
+
+              {/* RATING */}
+              <div className="flex justify-center mb-3">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span key={i} className={`text-yellow-400 ${i < product.rating ? "text-yellow-400" : "text-gray-300"}`}>
+                    ★
+                  </span>
+                ))}
+              </div>
+
+              {/* COLORS */}
+              <div className="flex justify-center items-center gap-2 flex-wrap mb-4">
+                {product.colors.map((color, idx) => idx < 4 && (
+                  <span
+                    key={color}
+                    className="w-6 h-6 rounded-full border border-gray-200 shadow-inner"
+                    style={{ backgroundColor: color.toLowerCase() }}
+                    title={color}
+                  ></span>
+                ))}
+                {product.colors.length > 4 && (
+                  <span className="text-gray-500 text-sm">+{product.colors.length - 4}</span>
+                )}
+              </div>
+
+              {/* ADD TO CART */}
+              <button className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-full font-semibold transition transform hover:scale-105">
+                Add to Cart
+              </button>
+            </motion.div>
           ))}
         </div>
       </div>
