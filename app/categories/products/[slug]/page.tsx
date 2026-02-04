@@ -9,7 +9,7 @@ const products = [
   {
     category: "pants",
     slug: "red-pants",
-    title: "Red Pants",
+    title: "Red Pants test",
     price: "$20",
     src: "/product-pants.png",
     colors: ["Red", "Blue"],

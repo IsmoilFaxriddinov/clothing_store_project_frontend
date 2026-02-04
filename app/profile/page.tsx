@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useFavorite } from "../context/FavoriteContext";
+import { AiFillHeart } from "react-icons/ai";
 
 // Test uchun foydalanuvchi va orderlar
 const mockUser = {
@@ -18,6 +20,7 @@ const mockUser = {
 
 export default function ProfilePage() {
   const [user] = useState(mockUser);
+  const { favorites, toggleFavorite } = useFavorite();
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-purple-50 to-blue-50 p-6 md:p-16">
@@ -59,9 +62,7 @@ export default function ProfilePage() {
           transition={{ duration: 0.5 }}
           className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6"
         >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            My Orders
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Orders</h2>
 
           {user.orders.length === 0 ? (
             <p className="text-gray-500">You have no orders yet.</p>
@@ -86,6 +87,42 @@ export default function ProfilePage() {
             </div>
           )}
         </motion.div>
+      </div>
+
+      {/* FAVORITES */}
+      <div className="max-w-6xl mx-auto mt-16">
+        <h2 className="text-3xl font-bold text-pink-700 mb-6">My Favorites</h2>
+        {favorites.length === 0 ? (
+          <p className="text-gray-500">You have no favorite products yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {favorites.map((product) => (
+              <motion.div
+                key={product.slug}
+                whileHover={{ scale: 1.05 }}
+                className="bg-white p-4 rounded-3xl shadow flex flex-col items-center gap-3 relative"
+              >
+                <img
+                  src={product.images[0]}
+                  alt={product.title}
+                  className="h-40 w-full object-contain mb-2"
+                />
+                <h3 className="font-semibold text-center">{product.title}</h3>
+                <span className="text-pink-700 font-bold">
+                  {product.discount ?? product.price}
+                </span>
+                {/* Yurakni bosib o'chirish */}
+                <motion.button
+                  onClick={() => toggleFavorite(product)}
+                  whileTap={{ scale: 0.8 }}
+                  className="absolute top-3 right-3 text-2xl"
+                >
+                  <AiFillHeart className="text-red-500" />
+                </motion.button>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

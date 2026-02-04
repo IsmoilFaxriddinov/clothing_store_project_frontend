@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register } = useAuth(); // ✅ AuthContext register funksiyasi
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,14 +20,19 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
+    if (!fullName || !email || !password || !phone) {
+      setError("Please fill all fields");
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Test alert
       setTimeout(() => {
-        alert(
-          `User Registered!\nFull Name: ${fullName}\nEmail: ${email}\nPhone: ${phone}`
-        );
+        // ✅ AuthContext ga saqlash
+        register({ fullName, email, phone });
+
         setLoading(false);
-        router.push("/"); // <-- Home page ga redirect
+        router.push("/products"); // ✅ Registerdan keyin products page
       }, 800);
     } catch (err) {
       setError("Something went wrong!");

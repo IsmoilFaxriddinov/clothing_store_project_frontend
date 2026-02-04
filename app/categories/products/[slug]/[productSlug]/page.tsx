@@ -1,10 +1,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { AiFillHeart } from "react-icons/ai";
+import { useCart } from "@/app/context/CartContext";
+import { useFavorite } from "@/app/context/FavoriteContext"; // FavoriteContext
 
-// Products data (short version, lekin similar products ham shu arraydan ishlatiladi)
+// Mahsulotlar ma'lumotlari
 const products = [
   {
     category: "pants",
@@ -12,7 +15,7 @@ const products = [
     title: "Red Pants",
     price: "$20",
     discount: "$15",
-    image: "/product-pants.png",
+    images: ["/product-pants.png", "/product-pantss.png", "/product-pants.png", "/product-pants.png"],
     description: "Comfortable red pants for kids. Soft and stylish.",
     colors: ["Red", "Blue"],
     sizes: ["S", "M", "L"],
@@ -25,7 +28,7 @@ const products = [
     slug: "blue-pants",
     title: "Blue Pants",
     price: "$22",
-    image: "/product-pants2.png",
+    images: ["/product-pants2.png", "/product-pants.png", "/product-pants3.png", "/product-pants4.png"],
     description: "Classic blue pants for kids. Durable and comfy.",
     colors: ["Blue", "Green"],
     sizes: ["M", "L", "XL"],
@@ -39,7 +42,7 @@ const products = [
     title: "Red Shoes",
     price: "$30",
     discount: "$25",
-    image: "/product-shoes.png",
+    images: ["/product-shoes.png", "/product-shoes2.png", "/product-shoes3.png", "/product-shoes4.png"],
     description: "Stylish red shoes for daily wear.",
     colors: ["Red"],
     sizes: ["M", "L"],
@@ -52,7 +55,7 @@ const products = [
     slug: "blue-jacket",
     title: "Blue Jacket",
     price: "$50",
-    image: "/product-jacket2.png",
+    images: ["/product-jacket.png", "/product-jacket2.png", "/product-jacket3.png", "/product-jacket4.png"],
     description: "Warm and comfy jacket for kids.",
     colors: ["Blue", "Green"],
     sizes: ["M", "L", "XL"],
@@ -65,12 +68,28 @@ const products = [
 export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { addToCart } = useCart();
+  const { favorites, toggleFavorite } = useFavorite(); // faqat bitta hook
+
   const product = products.find(
     (p) => p.category === params.slug && p.slug === params.productSlug
   );
 
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  const [activeImage, setActiveImage] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [liked, setLiked] = useState(false);
+
+  // Component mount bo‘lganida, agar favorites da bo‘lsa liked true qilamiz
+  useEffect(() => {
+    if (product) {
+      const isFavorite = favorites.some(
+        (fav) => fav.category === product.category && fav.slug === product.slug
+      );
+      setLiked(isFavorite);
+    }
+  }, [favorites, product]);
 
   if (!product) {
     return (
@@ -85,13 +104,32 @@ export default function ProductDetailPage() {
       alert("Please select a color and size!");
       return;
     }
-    alert(
-      `Added ${product.title} - Color: ${selectedColor}, Size: ${selectedSize} to cart!`
-    );
-    router.push("/products");
+
+    addToCart({
+      title: product.title,
+      price: product.discount
+        ? Number(product.discount.replace("$", ""))
+        : Number(product.price.replace("$", "")),
+      color: selectedColor,
+      size: selectedSize,
+      quantity: 1,
+      image: product.images[0],
+    });
+
+    setAdding(true);
+
+    setTimeout(() => {
+      setAdding(false);
+      router.push("/products");
+    }, 1200);
   };
 
-  // Similar products (same category, excluding current)
+  const handleToggleFavorite = () => {
+    if (!product) return;
+    toggleFavorite(product);
+    setLiked((prev) => !prev);
+  };
+
   const similarProducts = products.filter(
     (p) => p.category === product.category && p.slug !== product.slug
   );
@@ -99,44 +137,64 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-purple-50 to-blue-50 p-6 md:p-16">
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-start">
-        {/* IMAGE */}
-        <div className="bg-white rounded-3xl shadow-lg p-4 flex justify-center items-center">
-          <img
-            src={product.image}
+        {/* IMAGE GALLERY */}
+        <div className="bg-white rounded-3xl shadow-xl p-6">
+          <motion.img
+            key={product.images[activeImage]}
+            src={product.images[activeImage]}
             alt={product.title}
-            className="w-full h-[400px] md:h-[500px] object-cover rounded-2xl"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="w-full h-[400px] md:h-[500px] object-contain rounded-2xl mb-4"
           />
+          <div className="flex gap-3 justify-center">
+            {product.images.map((img, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveImage(index)}
+                className={`w-20 h-20 rounded-xl border overflow-hidden transition
+                  ${activeImage === index
+                    ? "border-pink-600 ring-2 ring-pink-400"
+                    : "border-gray-200 opacity-70 hover:opacity-100"
+                  }`}
+              >
+                <img src={img} alt="thumb" className="w-full h-full object-contain" />
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* INFO */}
-        <div className="flex flex-col justify-start">
-          <h1 className="text-4xl md:text-5xl font-bold text-pink-700 mb-2">
-            {product.title}
-          </h1>
+        {/* PRODUCT INFO */}
+        <div>
+          <h1 className="text-4xl md:text-5xl font-bold text-pink-700 mb-2">{product.title}</h1>
 
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex gap-3 mb-4 items-center">
             <span className="text-2xl font-extrabold text-pink-700">
-              {product.discount ? product.discount : product.price}
+              {product.discount ?? product.price}
             </span>
             {product.discount && (
-              <span className="text-gray-400 line-through">{product.price}</span>
+              <span className="line-through text-gray-400">{product.price}</span>
             )}
+
+            {/* ❤️ Yurakcha animatsiya */}
+            <motion.button
+              onClick={handleToggleFavorite}
+              whileTap={{ scale: 0.8 }}
+              className="ml-4 text-3xl relative"
+            >
+              <motion.span
+                key={liked ? "liked" : "unliked"} // animate har safar ishlashi uchun
+                initial={{ scale: 1 }}
+                animate={{ scale: liked ? [1, 1.3, 1] : 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AiFillHeart className={liked ? "text-red-500" : "text-gray-300"} />
+              </motion.span>
+            </motion.button>
           </div>
 
           <p className="text-gray-700 mb-6">{product.description}</p>
-
-          {/* Extra info */}
-          <div className="mb-6 grid grid-cols-2 gap-4 text-gray-800">
-            <div>
-              <span className="font-semibold">Material: </span>{product.material}
-            </div>
-            <div>
-              <span className="font-semibold">Weight: </span>{product.weight}
-            </div>
-            <div>
-              <span className="font-semibold">Age Group: </span>{product.ageGroup}
-            </div>
-          </div>
 
           {/* COLORS */}
           <div className="mb-6">
@@ -146,10 +204,8 @@ export default function ProductDetailPage() {
                 <button
                   key={color}
                   onClick={() => setSelectedColor(color)}
-                  className={`w-10 h-10 rounded-full border-2 transition transform hover:scale-110 ${
-                    selectedColor === color ? "ring-2 ring-pink-600" : "opacity-80"
-                  }`}
                   style={{ backgroundColor: color.toLowerCase() }}
+                  className={`w-10 h-10 rounded-full border-2 ${selectedColor === color ? "ring-2 ring-pink-600" : "opacity-70"}`}
                 />
               ))}
             </div>
@@ -163,11 +219,11 @@ export default function ProductDetailPage() {
                 <button
                   key={size}
                   onClick={() => setSelectedSize(size)}
-                  className={`px-4 py-2 border rounded-lg font-semibold transition ${
-                    selectedSize === size
-                      ? "bg-pink-600 text-white border-pink-600"
-                      : "border-gray-300 text-gray-900 hover:bg-pink-100"
-                  }`}
+                  className={`px-5 py-2 rounded-lg border-2 font-semibold transition
+                    ${selectedSize === size
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-black border-black hover:bg-black hover:text-white"
+                    }`}
                 >
                   {size}
                 </button>
@@ -175,13 +231,22 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* ADD TO CART */}
-          <button
+          {/* ADD TO CART BUTTON */}
+          <motion.button
             onClick={handleAddToCart}
-            className="mt-6 bg-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-pink-700 transition transform hover:scale-105"
+            disabled={adding}
+            whileTap={{ scale: 0.95 }}
+            className={`w-full md:w-auto px-8 py-3 rounded-xl font-semibold transition
+              ${adding ? "bg-black text-white" : "bg-pink-600 text-white hover:bg-pink-700"}`}
           >
-            Add to Cart
-          </button>
+            {adding ? (
+              <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-center gap-2">
+                ✅ Added to Cart
+              </motion.span>
+            ) : (
+              <>Add to Cart 🛒</>
+            )}
+          </motion.button>
         </div>
       </div>
 
@@ -193,29 +258,13 @@ export default function ProductDetailPage() {
             {similarProducts.map((sp) => (
               <motion.div
                 key={sp.slug}
-                onClick={() =>
-                  router.push(`/categories/products/${sp.category}/${sp.slug}`)
-                }
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white rounded-3xl shadow-lg p-4 text-center cursor-pointer"
+                onClick={() => router.push(`/categories/products/${sp.category}/${sp.slug}`)}
+                className="bg-white p-4 rounded-3xl shadow cursor-pointer"
               >
-                <div className="w-full h-40 mb-4 overflow-hidden rounded-2xl">
-                  <img
-                    src={sp.image}
-                    alt={sp.title}
-                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
-                  />
-                </div>
-                <h3 className="font-semibold text-lg mb-1">{sp.title}</h3>
-                <div className="flex justify-center items-center gap-2">
-                  <span className="text-pink-700 font-bold">
-                    {sp.discount ? sp.discount : sp.price}
-                  </span>
-                  {sp.discount && (
-                    <span className="text-gray-400 line-through">{sp.price}</span>
-                  )}
-                </div>
+                <img src={sp.images[0]} alt={sp.title} className="h-40 w-full object-contain mb-3" />
+                <h3 className="font-semibold">{sp.title}</h3>
+                <span className="text-pink-700 font-bold">{sp.discount ?? sp.price}</span>
               </motion.div>
             ))}
           </div>
