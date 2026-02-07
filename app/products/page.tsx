@@ -6,15 +6,15 @@ import { motion } from "framer-motion";
 
 // Products data with more details
 const products = [
-  { category: "pants", slug: "red-pants", title: "Red Pants", price: "$20", discount: "$15", rating: 4, src: "/product-pants.png", colors: ["Red", "Blue"], sizes: ["S", "M", "L"], new: true },
-  { category: "pants", slug: "blue-pants", title: "Blue Pants", price: "$22", discount: "$18", rating: 5, src: "/product-pants2.png", colors: ["Blue", "Green"], sizes: ["M", "L", "XL"], new: false },
-  { category: "pants", slug: "green-pants", title: "Green Pants", price: "$25", rating: 4, src: "/product-pants3.png", colors: ["Green"], sizes: ["S", "M"], new: false },
-  { category: "shoes", slug: "red-shoes", title: "Red Shoes", price: "$30", discount: "$25", rating: 5, src: "/product-shoes.png", colors: ["Red"], sizes: ["M", "L"], new: true },
-  { category: "shoes", slug: "blue-shoes", title: "Blue Shoes", price: "$35", rating: 4, src: "/product-shoes2.png", colors: ["Blue"], sizes: ["S", "M", "L"], new: false },
-  { category: "jackets", slug: "green-jacket", title: "Green Jacket", price: "$48", discount: "$42", rating: 5, src: "/product-jacket3.png", colors: ["Green"], sizes: ["S", "M"], new: false },
-  { category: "jackets", slug: "red-jacket", title: "Red Jacket", price: "$45", rating: 4, src: "/product-jacket.png", colors: ["Red"], sizes: ["S", "M", "L"], new: true },
-  { category: "accessories", slug: "red-hat", title: "Red Hat", price: "$15", rating: 4, src: "/product-hat.png", colors: ["Red", "Yellow", "Blue"], sizes: ["S", "M"], new: true },
-  { category: "accessories", slug: "blue-hat", title: "Blue Hat", price: "$18", discount: "$14", rating: 5, src: "/product-hat2.png", colors: ["Blue"], sizes: ["M", "L"], new: false },
+  { category: "pants", slug: "red-pants", title: "Red Pants", price: "$20", discount: "$15", rating: 4, src: "/product-pants.png", colors: ["Red", "Blue"], sizes: ["S", "M", "L"], new: true, ageGroup: "3-8 years" },
+  { category: "pants", slug: "blue-pants", title: "Blue Pants", price: "$22", discount: "$18", rating: 5, src: "/product-pants2.png", colors: ["Blue", "Green"], sizes: ["M", "L", "XL"], new: false, ageGroup: "4-9 years" },
+  { category: "pants", slug: "green-pants", title: "Green Pants", price: "$25", rating: 4, src: "/product-pants3.png", colors: ["Green"], sizes: ["S", "M"], new: false, ageGroup: "5-10 years" },
+  { category: "shoes", slug: "red-shoes", title: "Red Shoes", price: "$30", discount: "$25", rating: 5, src: "/product-shoes.png", colors: ["Red"], sizes: ["M", "L"], new: true, ageGroup: "3-10 years" },
+  { category: "shoes", slug: "blue-shoes", title: "Blue Shoes", price: "$35", rating: 4, src: "/product-shoes2.png", colors: ["Blue"], sizes: ["S", "M", "L"], new: false, ageGroup: "5-12 years" },
+  { category: "jackets", slug: "green-jacket", title: "Green Jacket", price: "$48", discount: "$42", rating: 5, src: "/product-jacket3.png", colors: ["Green"], sizes: ["S", "M"], new: false, ageGroup: "6-12 years" },
+  { category: "jackets", slug: "red-jacket", title: "Red Jacket", price: "$45", rating: 4, src: "/product-jacket.png", colors: ["Red"], sizes: ["S", "M", "L"], new: true, ageGroup: "5-12 years" },
+  { category: "accessories", slug: "red-hat", title: "Red Hat", price: "$15", rating: 4, src: "/product-hat.png", colors: ["Red", "Yellow", "Blue"], sizes: ["S", "M"], new: true, ageGroup: "3-8 years" },
+  { category: "accessories", slug: "blue-hat", title: "Blue Hat", price: "$18", discount: "$14", rating: 5, src: "/product-hat2.png", colors: ["Blue"], sizes: ["M", "L"], new: false, ageGroup: "4-10 years" },
 ];
 
 export default function ProductsPage() {
@@ -25,15 +25,26 @@ export default function ProductsPage() {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedAge, setSelectedAge] = useState<string>("");
 
   const categories = Array.from(new Set(products.map((p) => p.category)));
+  const ageGroups = ["3-5 years", "6-8 years", "9-12 years"];
 
   const finalProducts = products.filter((p) => {
     const slugMatch = !slug || p.category === slug;
     const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(p.category);
     const sizeMatch = selectedSizes.length === 0 || selectedSizes.some((s) => p.sizes.includes(s));
     const colorMatch = selectedColors.length === 0 || selectedColors.some((c) => p.colors.includes(c));
-    return slugMatch && categoryMatch && sizeMatch && colorMatch;
+    let ageMatch = true;
+
+    if (selectedAge) {
+      // Age filter: check if product ageGroup overlaps with selectedAge
+      const [prodMin, prodMax] = p.ageGroup.split("-").map((v) => parseInt(v));
+      const [selMin, selMax] = selectedAge.split("-").map((v) => parseInt(v));
+      ageMatch = prodMax >= selMin && prodMin <= selMax;
+    }
+
+    return slugMatch && categoryMatch && sizeMatch && colorMatch && ageMatch;
   });
 
   return (
@@ -99,7 +110,7 @@ export default function ProductsPage() {
 
           {/* COLOR FILTER */}
           <h3 className="font-bold text-lg mb-4 text-pink-700">Color</h3>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap mb-6">
             {["Red", "Blue", "Green", "Yellow"].map((c) => (
               <motion.button
                 key={c}
@@ -117,6 +128,26 @@ export default function ProductsPage() {
                 }`}
                 style={{ backgroundColor: c.toLowerCase() }}
               />
+            ))}
+          </div>
+
+          {/* AGE FILTER */}
+          <h3 className="font-bold text-lg mb-4 text-pink-700">Age</h3>
+          <div className="flex flex-wrap gap-2 mb-6">
+            {ageGroups.map((age) => (
+              <motion.button
+                key={age}
+                onClick={() => setSelectedAge(selectedAge === age ? "" : age)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 rounded-full border font-semibold transition ${
+                  selectedAge === age
+                    ? "bg-gradient-to-r from-pink-500 to-indigo-500 text-white border-pink-500"
+                    : "border-gray-300 hover:bg-pink-100"
+                }`}
+              >
+                {age}
+              </motion.button>
             ))}
           </div>
         </aside>
@@ -161,7 +192,10 @@ export default function ProductsPage() {
               {/* RATING */}
               <div className="flex justify-center mb-3">
                 {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={`text-yellow-400 ${i < product.rating ? "text-yellow-400" : "text-gray-300"}`}>
+                  <span
+                    key={i}
+                    className={`text-yellow-400 ${i < product.rating ? "text-yellow-400" : "text-gray-300"}`}
+                  >
                     ★
                   </span>
                 ))}

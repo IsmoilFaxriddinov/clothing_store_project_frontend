@@ -1,128 +1,271 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useFavorite } from "../context/FavoriteContext";
 import { AiFillHeart } from "react-icons/ai";
+import { useFavorite } from "../context/FavoriteContext";
+import { useCheckout } from "../context/CheckoutContext";
 
-// Test uchun foydalanuvchi va orderlar
-const mockUser = {
-  fullName: "Ismoil Faxriddinov",
-  email: "ismoil@example.com",
-  phone: "+998901234567",
-  password: "********",
-  orders: [
-    { id: 1, product: "Red Shoes", price: 30, date: "2026-01-30" },
-    { id: 2, product: "Blue Jacket", price: 50, date: "2026-01-28" },
-    { id: 3, product: "Green Pants", price: 25, date: "2026-01-25" },
-  ],
+type Product = {
+  title: string;
+  quantity: number;
+  size?: string;
+  color?: string;
+  price?: number;
+  category?: string;
+  slug?: string;
+  images?: string[];
+  discount?: string;
+};
+
+type OrderWithTimer = {
+  id: string;
+  fullName: string | null;
+  address: string | null;
+  phone: string | null;
+  products: Product[];
+  startTime: number;
+  deliveryTime: number;
+  distanceFactor: number;
+  status: string;
+  orderCompleted?: boolean;
 };
 
 export default function ProfilePage() {
-  const [user] = useState(mockUser);
   const { favorites, toggleFavorite } = useFavorite();
+  const { orders } = useCheckout();
+
+  const [localOrders, setLocalOrders] = useState<OrderWithTimer[]>(() => {
+    if (orders && orders.length > 0)
+      return orders.map((o) => ({
+        ...o,
+        startTime: Date.now(),
+        distanceFactor: Math.random() * 2 + 1,
+        status: "Zakaz qabul qilindi",
+        deliveryTime: 0,
+      }));
+    return [
+      {
+        id: "default-user",
+        fullName: "John Doe",
+        phone: "+998 90 123 45 67",
+        address: "Toshkent, 56-dom",
+        products: [],
+        startTime: Date.now(),
+        deliveryTime: 0,
+        distanceFactor: 1,
+        status: "Zakaz qabul qilindi",
+      },
+    ];
+  });
+
+  const [elapsedTime, setElapsedTime] = useState<Record<string, number>>({});
+  const [showFeedback, setShowFeedback] = useState<Record<string, boolean>>({});
+  const [rating, setRating] = useState<Record<string, number>>({});
+  const [comment, setComment] = useState<Record<string, string>>({});
+
+  // Timer va status update
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLocalOrders((prev) =>
+        prev.map((order) => {
+          const baseTime = 30; // minimal delivery 30s
+          const deliveryTime = baseTime * order.distanceFactor;
+          const elapsed = Math.min((Date.now() - order.startTime) / 1000, deliveryTime);
+
+          let status = "Zakaz qabul qilindi";
+          if (elapsed >= deliveryTime) status = "Yetib bordi va bajarildi";
+          else if (elapsed >= deliveryTime / 2) status = "Yo‘lga chiqdi";
+
+          setElapsedTime((t) => ({ ...t, [order.id]: elapsed }));
+
+          if (elapsed >= deliveryTime && !showFeedback[order.id]) {
+            setShowFeedback((prev) => ({ ...prev, [order.id]: true }));
+          }
+
+          return { ...order, status, deliveryTime };
+        })
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showFeedback]);
+
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = Math.floor(sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const handleSubmitFeedback = (orderId: string) => {
+    console.log("Rating:", rating[orderId], "Comment:", comment[orderId]);
+    alert("Rahmat! Sizning fikringiz qabul qilindi.");
+    setShowFeedback((prev) => ({ ...prev, [orderId]: false }));
+  };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-purple-50 to-blue-50 p-6 md:p-16">
-      <h1 className="text-4xl md:text-5xl font-extrabold text-pink-700 mb-12 text-center">
+    <main className="min-h-screen bg-zinc-50 p-6 md:p-16">
+      <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-12 text-center">
         My Profile
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* USER INFO */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6"
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            Account Info
-          </h2>
-
-          <div className="flex flex-col gap-4">
-            {[
-              { label: "Full Name", value: user.fullName },
-              { label: "Email", value: user.email },
-              { label: "Phone", value: user.phone },
-              { label: "Password", value: user.password },
-            ].map((info) => (
-              <div key={info.label} className="flex flex-col">
-                <p className="text-gray-500 font-semibold">{info.label}</p>
-                <p className="text-gray-900 font-medium">{info.value}</p>
-              </div>
-            ))}
+        {/* User Info + Orders */}
+        <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">User Info</h2>
+          <div className="bg-zinc-50 p-4 rounded-2xl shadow-md flex flex-col gap-2 border-l-4 border-blue-400">
+            <p className="font-semibold text-gray-900">
+              Full Name: {localOrders[0]?.fullName ?? "None"}
+            </p>
+            <p className="text-gray-700 text-sm">Phone: {localOrders[0]?.phone ?? "None"}</p>
+            <p className="text-gray-700 text-sm">Address: {localOrders[0]?.address ?? "None"}</p>
           </div>
-        </motion.div>
 
-        {/* ORDERS */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6"
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Orders</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mt-6 mb-4">Orders</h2>
+          {localOrders.length > 0 ? (
+            localOrders.map((order) => (
+              <motion.div
+                key={order.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="bg-zinc-50 p-4 rounded-2xl shadow-md flex flex-col gap-4 border-l-4 border-green-400"
+              >
+                <p className="font-semibold text-gray-900 mb-2">{order.fullName}</p>
 
-          {user.orders.length === 0 ? (
-            <p className="text-gray-500">You have no orders yet.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {user.orders.map((order, idx) => (
-                <motion.div
-                  key={order.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="flex justify-between items-center bg-pink-50 p-4 rounded-2xl shadow-inner hover:shadow-lg transition"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">{order.product}</p>
-                    <p className="text-gray-500 text-sm">Date: {order.date}</p>
+                <div className="flex gap-4 overflow-x-auto">
+                  {order.products.length > 0 ? (
+                    order.products.map((p, idx) => (
+                      <motion.div
+                        key={idx}
+                        whileHover={{ scale: 1.03 }}
+                        className="flex-shrink-0 w-48 bg-white p-3 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
+                      >
+                        {p.images && p.images[0] && (
+                          <img
+                            src={p.images[0]}
+                            alt={p.title}
+                            className="w-full h-32 object-cover rounded-lg mb-2"
+                          />
+                        )}
+                        <p className="font-semibold text-gray-900">{p.title}</p>
+                        <p className="text-gray-700 text-sm">
+                          Color: {p.color ?? "N/A"} | Size: {p.size ?? "N/A"}
+                        </p>
+                        <p className="text-gray-700 text-sm">Quantity: {p.quantity}</p>
+                        <p className="text-gray-900 font-bold">${p.price ?? "N/A"}</p>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No products in this order.</p>
+                  )}
+                </div>
+
+                {/* Timer & Status */}
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-gray-600 text-sm font-mono">
+                    Time: {formatTime(elapsedTime[order.id] ?? 0)} /{" "}
+                    {formatTime(order.deliveryTime)}
+                  </p>
+                  <p
+                    className={`font-bold px-3 py-1 rounded-xl ${
+                      order.status === "Zakaz qabul qilindi"
+                        ? "bg-yellow-300 text-yellow-900"
+                        : order.status === "Yo‘lga chiqdi"
+                        ? "bg-blue-300 text-blue-900"
+                        : "bg-green-300 text-green-900"
+                    }`}
+                  >
+                    {order.status}
+                  </p>
+                </div>
+
+                {/* Feedback page */}
+                {showFeedback[order.id] && (
+                  <div className="mt-4 p-4 bg-white rounded-xl shadow flex flex-col gap-4">
+                    <p className="font-semibold text-gray-900">
+                      Iltimos, xizmatimizni baholang:
+                    </p>
+                    <div className="flex gap-2 text-white-400 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={`text-3xl cursor-pointer ${
+                            star <= (rating[order.id] || 0) ? "text-yellow-500" : ""
+                          }`}
+                          onClick={() =>
+                            setRating((prev) => ({ ...prev, [order.id]: star }))
+                          }
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                    <textarea
+                      value={comment[order.id] || ""}
+                      onChange={(e) =>
+                        setComment((prev) => ({ ...prev, [order.id]: e.target.value }))
+                      }
+                      placeholder="Fikringizni yozing..."
+                      className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                    <button
+                      onClick={() => handleSubmitFeedback(order.id)}
+                      className="px-4 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition"
+                    >
+                      Submit
+                    </button>
                   </div>
-                  <p className="text-pink-700 font-bold">${order.price}</p>
+                )}
+              </motion.div>
+            ))
+          ) : (
+            <p className="text-gray-500">You have no orders yet.</p>
+          )}
+        </div>
+
+        {/* Favorites */}
+        <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Favorite Products</h2>
+          {favorites.length === 0 ? (
+            <p className="text-gray-500">You have no favorite products yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 gap-6">
+              {favorites.map((product) => (
+                <motion.div
+                  key={product.slug}
+                  whileHover={{ scale: 1.05 }}
+                  className="bg-zinc-50 p-4 rounded-3xl shadow flex flex-col items-center gap-3 relative cursor-pointer"
+                  onClick={() =>
+                    window.location.href = `/categories/products/${product.category}/${product.slug}`
+                  }
+                >
+                  {product.images && product.images[0] && (
+                    <img
+                      src={product.images[0]}
+                      alt={product.title}
+                      className="h-40 w-full object-contain mb-2"
+                    />
+                  )}
+                  <h3 className="font-semibold text-center">{product.title}</h3>
+                  <span className="text-gray-900 font-bold">
+                    {product.discount ?? product.price}
+                  </span>
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(product);
+                    }}
+                    whileTap={{ scale: 0.8 }}
+                    className="absolute top-3 right-3 text-2xl"
+                  >
+                    <AiFillHeart className="text-red-500" />
+                  </motion.button>
                 </motion.div>
               ))}
             </div>
           )}
-        </motion.div>
-      </div>
-
-      {/* FAVORITES */}
-      <div className="max-w-6xl mx-auto mt-16">
-        <h2 className="text-3xl font-bold text-pink-700 mb-6">My Favorites</h2>
-        {favorites.length === 0 ? (
-          <p className="text-gray-500">You have no favorite products yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-            {favorites.map((product) => (
-              <motion.div
-                key={product.slug}
-                whileHover={{ scale: 1.05 }}
-                className="bg-white p-4 rounded-3xl shadow flex flex-col items-center gap-3 relative"
-              >
-                <img
-                  src={product.images[0]}
-                  alt={product.title}
-                  className="h-40 w-full object-contain mb-2"
-                />
-                <h3 className="font-semibold text-center">{product.title}</h3>
-                <span className="text-pink-700 font-bold">
-                  {product.discount ?? product.price}
-                </span>
-                {/* Yurakni bosib o'chirish */}
-                <motion.button
-                  onClick={() => toggleFavorite(product)}
-                  whileTap={{ scale: 0.8 }}
-                  className="absolute top-3 right-3 text-2xl"
-                >
-                  <AiFillHeart className="text-red-500" />
-                </motion.button>
-              </motion.div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
     </main>
   );

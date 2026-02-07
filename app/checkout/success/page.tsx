@@ -67,10 +67,10 @@ export default function SuccessPage() {
       </div>
 
       <Link
-        href="/products"
+        href="/profile"
         className="mt-10 bg-zinc-800 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-zinc-900 transition"
       >
-        Back to Shop
+        Profile page
       </Link>
     </div>
   );

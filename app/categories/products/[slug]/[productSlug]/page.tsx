@@ -81,6 +81,10 @@ export default function ProductDetailPage() {
   const [adding, setAdding] = useState(false);
   const [liked, setLiked] = useState(false);
 
+  // Age filter
+  const ageGroups = ["3-5 years", "6-8 years", "9-12 years"];
+  const [selectedAge, setSelectedAge] = useState<string>("");
+
   // Component mount bo‘lganida, agar favorites da bo‘lsa liked true qilamiz
   useEffect(() => {
     if (product) {
@@ -130,7 +134,15 @@ export default function ProductDetailPage() {
     setLiked((prev) => !prev);
   };
 
-  const similarProducts = products.filter(
+  // Filterlangan mahsulotlar
+  const filteredProducts = selectedAge
+    ? products.filter((p) =>
+        p.ageGroup.split("-")[0] <= selectedAge.split("-")[1].split(" ")[0]
+      )
+    : products;
+
+  // Similar products filter
+  const similarProducts = filteredProducts.filter(
     (p) => p.category === product.category && p.slug !== product.slug
   );
 
@@ -228,6 +240,34 @@ export default function ProductDetailPage() {
                   {size}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* AGE GROUP FILTER */}
+          <div className="mb-6">
+            <h3 className="font-semibold mb-2 text-gray-900">Age Group</h3>
+            <div className="flex gap-3 flex-wrap">
+              {ageGroups.map((age) => (
+                <button
+                  key={age}
+                  onClick={() => setSelectedAge(age)}
+                  className={`px-4 py-2 rounded-xl border font-medium transition
+                    ${selectedAge === age
+                      ? "bg-pink-600 text-white border-pink-600"
+                      : "bg-white text-gray-900 border-gray-300 hover:bg-pink-100"
+                    }`}
+                >
+                  {age}
+                </button>
+              ))}
+              {selectedAge && (
+                <button
+                  onClick={() => setSelectedAge("")}
+                  className="px-4 py-2 rounded-xl border bg-gray-200 text-gray-700 hover:bg-gray-300"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 

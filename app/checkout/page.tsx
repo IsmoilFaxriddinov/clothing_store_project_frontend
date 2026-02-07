@@ -4,36 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useCart } from "../context/CartContext";
+import CheckoutMap from "@/components/CheckoutMap";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart } = useCart();
+  const { cart, updateQuantity, updateColor, updateSize, removeFromCart } =
+    useCart();
 
-  // Delivery info
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("");
-  const [district, setDistrict] = useState("");
-  const [street, setStreet] = useState("");
-  const [house, setHouse] = useState("");
+  const [address, setAddress] = useState("Toshkent");
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [latLng, setLatLng] = useState<{ lat: number; lng: number } | null>(
+    { lat: 41.30557, lng: 69.23136 }
+  );
 
-  // Payment
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardPIN, setCardPIN] = useState("");
-
-  // Promo
   const [promo, setPromo] = useState("");
   const [discount, setDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
-
   const [loading, setLoading] = useState(false);
 
-  // Prices
   const subtotal = cart.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
-
   const total = subtotal - discount;
 
   const applyPromo = () => {
@@ -42,205 +36,234 @@ export default function CheckoutPage() {
       setPromoError("");
     } else {
       setDiscount(0);
-      setPromoError("Invalid promo code");
+      setPromoError("Promo kodi noto‘g‘ri");
     }
   };
 
-  const handlePurchase = (e: React.FormEvent) => {
+  const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!latLng) {
+      alert("Iltimos, xaritada manzilingizni tanlang!");
+      return;
+    }
+
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      // ✅ Strapi backend endpointiga fetch
+      const res = await fetch("http://localhost:1338/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: {
+            user: {
+              name: fullName,
+              phone,
+              address,
+            },
+            items: cart.map((item) => ({
+              product: item.title,
+              color: item.color,
+              size: item.size,
+              price: item.price,
+              quantity: item.quantity,
+            })),
+            discount,
+            promo_code: promo || null,
+          },
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(
+          "Xato yuz berdi: " + (data.error?.message || "Server xatosi")
+        );
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
       router.push("/checkout/success");
-    }, 1200);
+    } catch (err: any) {
+      alert("Xato yuz berdi: " + err.message);
+      setLoading(false);
+    }
   };
 
   return (
-    <main className="min-h-screen bg-zinc-50 p-6 md:p-16">
-      <h1 className="text-4xl font-extrabold text-zinc-800 mb-12 text-center">
+    <main className="min-h-screen bg-white p-6 md:p-16 text-gray-900">
+      <h1 className="text-4xl font-extrabold mb-12 text-center text-pink-500">
         Checkout
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* CART */}
+        {/* Cart */}
         <div>
-          <h2 className="text-2xl font-semibold text-zinc-800 mb-6">
-            Your Cart
-          </h2>
-
+          <h2 className="text-2xl font-semibold mb-6">Savatcha</h2>
           <div className="space-y-4">
-            {cart.map((item, idx) => (
+            {cart.map((item) => (
               <motion.div
-                key={idx}
+                key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="flex gap-4 bg-white p-4 rounded-3xl shadow border border-zinc-100"
+                className="flex gap-4 bg-gray-100 p-4 rounded-2xl shadow"
               >
                 <img
                   src={item.image}
                   alt={item.title}
-                  className="w-24 h-24 object-contain"
+                  className="w-24 h-24 object-contain rounded-lg"
                 />
-
-                <div className="flex-1">
-                  <h3 className="font-semibold text-zinc-800">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-zinc-500">
-                    {item.color} • {item.size}
-                  </p>
-                  <p className="font-bold text-zinc-800">
-                    ${item.price}
-                  </p>
+                <div className="flex-1 space-y-1">
+                  <h3 className="font-semibold">{item.title}</h3>
+                  <div className="flex gap-2 items-center">
+                    <select
+                      value={item.color}
+                      onChange={(e) => updateColor(item.id, e.target.value)}
+                      className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
+                    >
+                      <option>Red</option>
+                      <option>Blue</option>
+                      <option>Black</option>
+                    </select>
+                    <select
+                      value={item.size}
+                      onChange={(e) => updateSize(item.id, e.target.value)}
+                      className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
+                    >
+                      <option>S</option>
+                      <option>M</option>
+                      <option>L</option>
+                    </select>
+                  </div>
+                  <p className="font-bold">${item.price}</p>
                 </div>
-
-                <span className="font-semibold text-zinc-600">
-                  x{item.quantity}
-                </span>
+                <div className="flex flex-col items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateQuantity(
+                        item.id,
+                        Math.min(Number(e.target.value), 20)
+                      )
+                    }
+                    className="w-16 text-center rounded-xl bg-gray-200 border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-red-500 text-sm hover:underline"
+                  >
+                    O‘chirish
+                  </button>
+                </div>
               </motion.div>
             ))}
           </div>
 
-          {/* PROMO */}
-          <div className="mt-6 bg-white p-5 rounded-3xl shadow border border-zinc-100">
-            <h3 className="font-semibold text-lg text-zinc-800 mb-3">
-              Promo Code
-            </h3>
-
-            <div className="flex gap-3">
-              <input
-                value={promo}
-                onChange={(e) => setPromo(e.target.value)}
-                placeholder="Enter promo code"
-                className="flex-1 px-4 py-3 border border-zinc-300 rounded-2xl
-                text-zinc-800 placeholder:text-zinc-400
-                focus:ring-2 focus:ring-zinc-400 outline-none"
-              />
-              <button
-                type="button"
-                onClick={applyPromo}
-                className="bg-zinc-800 text-white px-5 rounded-2xl
-                font-semibold hover:bg-zinc-900 transition"
-              >
-                Apply
-              </button>
-            </div>
-
-            {promoError && (
-              <p className="text-red-500 text-sm mt-2">
-                {promoError}
-              </p>
-            )}
-          </div>
-
-          {/* TOTAL */}
-          <div className="mt-6 bg-white p-5 rounded-3xl shadow border border-zinc-100 space-y-2">
-            <div className="flex justify-between text-zinc-600">
-              <span>Subtotal</span>
+          {/* Total */}
+          <div className="mt-6 bg-gray-100 p-5 rounded-2xl shadow space-y-2">
+            <div className="flex justify-between text-gray-700">
+              <span>Jami</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
-
             {discount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Discount</span>
+                <span>Chegirma</span>
                 <span>- ${discount.toFixed(2)}</span>
               </div>
             )}
-
-            <div className="flex justify-between font-bold text-xl">
-              <span className="text-zinc-800">Total</span>
-              <span className="text-pink-600">
-                ${total.toFixed(2)}
-              </span>
+            <div className="flex justify-between font-bold text-xl text-gray-900">
+              <span>Umumiy</span>
+              <span className="text-pink-500">${total.toFixed(2)}</span>
             </div>
           </div>
         </div>
 
-        {/* FORM */}
+        {/* Form */}
         <form
           onSubmit={handlePurchase}
-          className="bg-white p-8 rounded-3xl shadow-2xl space-y-4 border border-zinc-100"
+          className="bg-gray-100 p-8 rounded-2xl shadow space-y-4"
         >
-          <h2 className="text-2xl font-semibold text-zinc-800">
-            Delivery Info
+          <h2 className="text-2xl font-semibold text-pink-500">
+            Yetkazib berish
           </h2>
 
           <input
-            placeholder="Full Name"
+            placeholder="To‘liq ism"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
-            className="w-full px-4 py-3 border border-zinc-300 rounded-2xl
-            text-zinc-800 placeholder:text-zinc-400
-            focus:ring-2 focus:ring-zinc-400 outline-none"
+            className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
           />
 
           <input
-            placeholder="Phone"
+            placeholder="Telefon raqam"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required
-            className="w-full px-4 py-3 border border-zinc-300 rounded-2xl
-            text-zinc-800 placeholder:text-zinc-400
-            focus:ring-2 focus:ring-zinc-400 outline-none"
+            className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
           />
 
-          <div className="grid grid-cols-2 gap-3">
-            {[["City", city, setCity],
-              ["District", district, setDistrict],
-              ["Street", street, setStreet],
-              ["House", house, setHouse]].map(
-              ([ph, val, set]: any, i) => (
+          {/* Map */}
+          <CheckoutMap
+            latLng={latLng}
+            setLatLng={setLatLng}
+            setAddress={setAddress}
+          />
+
+          {/* Address tahrirlash */}
+          {address && (
+            <div className="flex items-center gap-2 mt-2">
+              {editingAddress ? (
                 <input
-                  key={i}
-                  placeholder={ph}
-                  value={val}
-                  onChange={(e) => set(e.target.value)}
-                  required
-                  className="px-4 py-3 border border-zinc-300 rounded-2xl
-                  text-zinc-800 placeholder:text-zinc-400
-                  focus:ring-2 focus:ring-zinc-400 outline-none"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="flex-1 px-3 py-2 border rounded-xl"
                 />
-              )
-            )}
+              ) : (
+                <p className="flex-1 text-gray-700">{address}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingAddress(!editingAddress)}
+                className="px-3 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition"
+              >
+                {editingAddress ? "Saqlash" : "Tahrirlash"}
+              </button>
+            </div>
+          )}
+
+          {/* Promo */}
+          <div className="pt-4 flex gap-2">
+            <input
+              value={promo}
+              onChange={(e) => setPromo(e.target.value)}
+              placeholder="Promo kodi"
+              className="flex-1 px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
+            />
+            <button
+              type="button"
+              onClick={applyPromo}
+              className="px-5 rounded-2xl bg-pink-500 font-semibold hover:bg-pink-600 transition"
+            >
+              Qo‘llash
+            </button>
           </div>
-
-          <h2 className="text-2xl font-semibold text-zinc-800 pt-4">
-            Payment
-          </h2>
-
-          <input
-            placeholder="Card Number"
-            value={cardNumber}
-            onChange={(e) =>
-              setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))
-            }
-            required
-            className="w-full px-4 py-3 border border-zinc-300 rounded-2xl
-            tracking-widest text-zinc-800 placeholder:text-zinc-400
-            focus:ring-2 focus:ring-zinc-400 outline-none"
-          />
-
-          <input
-            type="password"
-            placeholder="PIN"
-            value={cardPIN}
-            onChange={(e) => setCardPIN(e.target.value)}
-            required
-            className="w-full px-4 py-3 border border-zinc-300 rounded-2xl
-            text-zinc-800 placeholder:text-zinc-400
-            focus:ring-2 focus:ring-zinc-400 outline-none"
-          />
+          {promoError && <p className="text-red-500 mt-1">{promoError}</p>}
 
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             disabled={loading}
-            className="w-full mt-4 bg-pink-600 text-white py-3
-            rounded-2xl font-bold hover:bg-pink-700 transition"
+            className="w-full mt-4 bg-pink-500 text-white py-3 rounded-2xl font-bold hover:bg-pink-600 transition"
           >
-            {loading ? "Processing..." : "Confirm Purchase"}
+            {loading ? "Jarayonda..." : "Sotib olish"}
           </motion.button>
         </form>
       </div>
