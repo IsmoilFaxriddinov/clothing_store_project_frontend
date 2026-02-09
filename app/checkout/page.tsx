@@ -8,26 +8,23 @@ import CheckoutMap from "@/components/CheckoutMap";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, updateQuantity, updateColor, updateSize, removeFromCart } =
-    useCart();
+  const { cart, updateQuantity, updateColor, updateSize, removeFromCart } = useCart();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("Toshkent");
   const [editingAddress, setEditingAddress] = useState(false);
-  const [latLng, setLatLng] = useState<{ lat: number; lng: number } | null>(
-    { lat: 41.30557, lng: 69.23136 }
-  );
+  const [latLng, setLatLng] = useState<{ lat: number; lng: number } | null>({
+    lat: 41.30557,
+    lng: 69.23136,
+  });
 
   const [promo, setPromo] = useState("");
   const [discount, setDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const subtotal = cart.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const total = subtotal - discount;
 
   const applyPromo = () => {
@@ -42,51 +39,35 @@ export default function CheckoutPage() {
 
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!latLng) {
-      alert("Iltimos, xaritada manzilingizni tanlang!");
-      return;
-    }
+    if (!latLng) return alert("Iltimos, xaritada manzilingizni tanlang!");
+    if (cart.length === 0) return alert("Savatcha bo‘sh!");
 
     setLoading(true);
 
     try {
-      // ✅ Strapi backend endpointiga fetch
-      const res = await fetch("http://localhost:1338/api/orders/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          data: {
-            user: {
-              name: fullName,
-              phone,
-              address,
-            },
-            items: cart.map((item) => ({
-              product: item.title,
-              color: item.color,
-              size: item.size,
-              price: item.price,
-              quantity: item.quantity,
-            })),
-            discount,
-            promo_code: promo || null,
-          },
-        }),
-      });
+      // ✅ 1 soniya kutish simulyatsiyasi
+      await new Promise((res) => setTimeout(res, 1000));
 
-      const data = await res.json();
+      // Soxta order yaratish
+      const order = {
+        id: "order-" + Date.now(),
+        fullName,
+        phone,
+        address,
+        products: cart,
+        startTime: Date.now(),
+        distanceFactor: Math.random() * 2 + 1,
+        status: "Zakaz qabul qilindi",
+        deliveryTime: 0,
+      };
 
-      if (!res.ok) {
-        alert(
-          "Xato yuz berdi: " + (data.error?.message || "Server xatosi")
-        );
-        setLoading(false);
-        return;
-      }
+      // LocalStorage ga saqlash (ProfilePage o‘qiy oladi)
+      const existing = localStorage.getItem("orders");
+      const orders = existing ? JSON.parse(existing) : [];
+      localStorage.setItem("orders", JSON.stringify([...orders, order]));
 
       setLoading(false);
-      router.push("/checkout/success");
+      router.push("/profile");
     } catch (err: any) {
       alert("Xato yuz berdi: " + err.message);
       setLoading(false);
@@ -147,10 +128,7 @@ export default function CheckoutPage() {
                     max={20}
                     value={item.quantity}
                     onChange={(e) =>
-                      updateQuantity(
-                        item.id,
-                        Math.min(Number(e.target.value), 20)
-                      )
+                      updateQuantity(item.id, Math.min(Number(e.target.value), 20))
                     }
                     className="w-16 text-center rounded-xl bg-gray-200 border"
                   />
@@ -190,9 +168,7 @@ export default function CheckoutPage() {
           onSubmit={handlePurchase}
           className="bg-gray-100 p-8 rounded-2xl shadow space-y-4"
         >
-          <h2 className="text-2xl font-semibold text-pink-500">
-            Yetkazib berish
-          </h2>
+          <h2 className="text-2xl font-semibold text-pink-500">Yetkazib berish</h2>
 
           <input
             placeholder="To‘liq ism"
@@ -211,11 +187,7 @@ export default function CheckoutPage() {
           />
 
           {/* Map */}
-          <CheckoutMap
-            latLng={latLng}
-            setLatLng={setLatLng}
-            setAddress={setAddress}
-          />
+          <CheckoutMap latLng={latLng} setLatLng={setLatLng} setAddress={setAddress} />
 
           {/* Address tahrirlash */}
           {address && (

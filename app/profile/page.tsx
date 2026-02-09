@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AiFillHeart } from "react-icons/ai";
 import { useFavorite } from "../context/FavoriteContext";
-import { useCheckout } from "../context/CheckoutContext";
 
 type Product = {
   title: string;
@@ -28,41 +27,29 @@ type OrderWithTimer = {
   deliveryTime: number;
   distanceFactor: number;
   status: string;
-  orderCompleted?: boolean;
 };
 
 export default function ProfilePage() {
   const { favorites, toggleFavorite } = useFavorite();
-  const { orders } = useCheckout();
 
-  const [localOrders, setLocalOrders] = useState<OrderWithTimer[]>(() => {
-    if (orders && orders.length > 0)
-      return orders.map((o) => ({
-        ...o,
-        startTime: Date.now(),
-        distanceFactor: Math.random() * 2 + 1,
-        status: "Zakaz qabul qilindi",
-        deliveryTime: 0,
-      }));
-    return [
-      {
-        id: "default-user",
-        fullName: "John Doe",
-        phone: "+998 90 123 45 67",
-        address: "Toshkent, 56-dom",
-        products: [],
-        startTime: Date.now(),
-        deliveryTime: 0,
-        distanceFactor: 1,
-        status: "Zakaz qabul qilindi",
-      },
-    ];
-  });
-
+  const [localOrders, setLocalOrders] = useState<OrderWithTimer[]>([]);
   const [elapsedTime, setElapsedTime] = useState<Record<string, number>>({});
   const [showFeedback, setShowFeedback] = useState<Record<string, boolean>>({});
   const [rating, setRating] = useState<Record<string, number>>({});
   const [comment, setComment] = useState<Record<string, string>>({});
+
+  // LocalStorage dan orderlarni o‘qish
+  useEffect(() => {
+    const stored = localStorage.getItem("orders");
+    if (stored) {
+      const orders: OrderWithTimer[] = JSON.parse(stored).map((o: OrderWithTimer) => ({
+        ...o,
+        status: "Zakaz qabul qilindi",
+        deliveryTime: 0,
+      }));
+      setLocalOrders(orders);
+    }
+  }, []);
 
   // Timer va status update
   useEffect(() => {
@@ -70,7 +57,7 @@ export default function ProfilePage() {
       setLocalOrders((prev) =>
         prev.map((order) => {
           const baseTime = 30; // minimal delivery 30s
-          const deliveryTime = baseTime * order.distanceFactor;
+          const deliveryTime = baseTime * (order.distanceFactor || 1);
           const elapsed = Math.min((Date.now() - order.startTime) / 1000, deliveryTime);
 
           let status = "Zakaz qabul qilindi";
@@ -112,17 +99,11 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* User Info + Orders */}
         <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">User Info</h2>
-          <div className="bg-zinc-50 p-4 rounded-2xl shadow-md flex flex-col gap-2 border-l-4 border-blue-400">
-            <p className="font-semibold text-gray-900">
-              Full Name: {localOrders[0]?.fullName ?? "None"}
-            </p>
-            <p className="text-gray-700 text-sm">Phone: {localOrders[0]?.phone ?? "None"}</p>
-            <p className="text-gray-700 text-sm">Address: {localOrders[0]?.address ?? "None"}</p>
-          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Orders</h2>
 
-          <h2 className="text-2xl font-semibold text-gray-900 mt-6 mb-4">Orders</h2>
-          {localOrders.length > 0 ? (
+          {localOrders.length === 0 ? (
+            <p className="text-gray-500">You have no orders yet.</p>
+          ) : (
             localOrders.map((order) => (
               <motion.div
                 key={order.id}
@@ -132,14 +113,17 @@ export default function ProfilePage() {
                 className="bg-zinc-50 p-4 rounded-2xl shadow-md flex flex-col gap-4 border-l-4 border-green-400"
               >
                 <p className="font-semibold text-gray-900 mb-2">{order.fullName}</p>
+                <p className="text-gray-700 text-sm">{order.phone}</p>
+                <p className="text-gray-700 text-sm">{order.address}</p>
 
-                <div className="flex gap-4 overflow-x-auto">
+                {/* Products */}
+                <div className="flex flex-wrap gap-4">
                   {order.products.length > 0 ? (
                     order.products.map((p, idx) => (
                       <motion.div
                         key={idx}
                         whileHover={{ scale: 1.03 }}
-                        className="flex-shrink-0 w-48 bg-white p-3 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
+                        className="w-48 bg-white p-3 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
                       >
                         {p.images && p.images[0] && (
                           <img
@@ -180,18 +164,20 @@ export default function ProfilePage() {
                   </p>
                 </div>
 
-                {/* Feedback page */}
+                {/* Feedback form */}
                 {showFeedback[order.id] && (
                   <div className="mt-4 p-4 bg-white rounded-xl shadow flex flex-col gap-4">
                     <p className="font-semibold text-gray-900">
                       Iltimos, xizmatimizni baholang:
                     </p>
-                    <div className="flex gap-2 text-white-400 mb-2">
+                    <div className="flex gap-2 mb-2">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <span
                           key={star}
                           className={`text-3xl cursor-pointer ${
-                            star <= (rating[order.id] || 0) ? "text-yellow-500" : ""
+                            star <= (rating[order.id] || 0)
+                              ? "text-yellow-500"
+                              : "text-gray-300"
                           }`}
                           onClick={() =>
                             setRating((prev) => ({ ...prev, [order.id]: star }))
@@ -219,8 +205,6 @@ export default function ProfilePage() {
                 )}
               </motion.div>
             ))
-          ) : (
-            <p className="text-gray-500">You have no orders yet.</p>
           )}
         </div>
 
