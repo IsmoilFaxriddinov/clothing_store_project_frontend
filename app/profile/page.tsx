@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AiFillHeart } from "react-icons/ai";
+import { FaCheckCircle } from "react-icons/fa"; // ✅ icon
 import { useFavorite } from "../context/FavoriteContext";
 
+/* ===== TYPES ===== */
 type Product = {
   title: string;
   quantity: number;
@@ -14,69 +16,80 @@ type Product = {
   category?: string;
   slug?: string;
   images?: string[];
-  discount?: string;
 };
 
-type OrderWithTimer = {
+type Order = {
   id: string;
-  fullName: string | null;
-  address: string | null;
-  phone: string | null;
+  user: { name: string; phone: string; address: string };
   products: Product[];
   startTime: number;
-  deliveryTime: number;
-  distanceFactor: number;
-  status: string;
+  distanceFactor?: number;
+  discount?: number;
+  promo_code?: string;
 };
 
+/* ===== PAGE ===== */
 export default function ProfilePage() {
   const { favorites, toggleFavorite } = useFavorite();
 
-  const [localOrders, setLocalOrders] = useState<OrderWithTimer[]>([]);
-  const [elapsedTime, setElapsedTime] = useState<Record<string, number>>({});
-  const [showFeedback, setShowFeedback] = useState<Record<string, boolean>>({});
-  const [rating, setRating] = useState<Record<string, number>>({});
-  const [comment, setComment] = useState<Record<string, string>>({});
+  const [order, setOrder] = useState<Order | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [notified, setNotified] = useState(false);
 
-  // LocalStorage dan orderlarni o‘qish
+  /* ===== LOAD LAST ORDER ===== */
   useEffect(() => {
     const stored = localStorage.getItem("orders");
     if (stored) {
-      const orders: OrderWithTimer[] = JSON.parse(stored).map((o: OrderWithTimer) => ({
-        ...o,
-        status: "Zakaz qabul qilindi",
-        deliveryTime: 0,
-      }));
-      setLocalOrders(orders);
+      const orders = JSON.parse(stored);
+      if (orders.length > 0) {
+        const lastOrder = orders[orders.length - 1];
+
+        lastOrder.startTime = lastOrder.startTime || Date.now();
+        lastOrder.distanceFactor = lastOrder.distanceFactor || 1;
+        lastOrder.products = Array.isArray(lastOrder.products)
+          ? lastOrder.products
+          : [];
+
+        setOrder(lastOrder);
+      }
     }
   }, []);
 
-  // Timer va status update
+  /* ===== TIMER ===== */
   useEffect(() => {
+    if (!order) return;
+
+    const deliveryTime = Math.floor(30 * (order.distanceFactor || 1));
+
     const interval = setInterval(() => {
-      setLocalOrders((prev) =>
-        prev.map((order) => {
-          const baseTime = 30; // minimal delivery 30s
-          const deliveryTime = baseTime * (order.distanceFactor || 1);
-          const elapsed = Math.min((Date.now() - order.startTime) / 1000, deliveryTime);
-
-          let status = "Zakaz qabul qilindi";
-          if (elapsed >= deliveryTime) status = "Yetib bordi va bajarildi";
-          else if (elapsed >= deliveryTime / 2) status = "Yo‘lga chiqdi";
-
-          setElapsedTime((t) => ({ ...t, [order.id]: elapsed }));
-
-          if (elapsed >= deliveryTime && !showFeedback[order.id]) {
-            setShowFeedback((prev) => ({ ...prev, [order.id]: true }));
-          }
-
-          return { ...order, status, deliveryTime };
-        })
-      );
+      const now = Date.now();
+      let passed = Math.floor((now - order.startTime) / 1000);
+      if (passed > deliveryTime) passed = deliveryTime;
+      setElapsed(passed);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [showFeedback]);
+  }, [order]);
+
+  /* ===== TELEGRAM NOTIFY ===== */
+  useEffect(() => {
+    if (!order || notified) return;
+
+    const deliveryTime = Math.floor(30 * (order.distanceFactor || 1));
+
+    if (elapsed >= deliveryTime && order.id) {
+      fetch("http://localhost:1337/api/orders/notify-delivered", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+      })
+        .then(() => setNotified(true))
+        .catch((err) => console.error("Telegram yuborilmadi", err));
+    }
+  }, [elapsed, order, notified]);
+
+  const deliveryTime = order ? Math.floor(30 * (order.distanceFactor || 1)) : 0;
+  const progress = deliveryTime ? Math.min((elapsed / deliveryTime) * 100, 100) : 0;
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -84,167 +97,137 @@ export default function ProfilePage() {
     return `${m}:${s}`;
   };
 
-  const handleSubmitFeedback = (orderId: string) => {
-    console.log("Rating:", rating[orderId], "Comment:", comment[orderId]);
-    alert("Rahmat! Sizning fikringiz qabul qilindi.");
-    setShowFeedback((prev) => ({ ...prev, [orderId]: false }));
+  const getStatusUz = () => {
+    if (!order) return "";
+    if (elapsed >= deliveryTime) return "Yetkazildi ✅";
+    if (elapsed >= deliveryTime / 2) return "Yo‘lga chiqdi 🚚";
+    return "Qabul qilindi 📝";
   };
 
   return (
-    <main className="min-h-screen bg-zinc-50 p-6 md:p-16">
-      <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-12 text-center">
-        My Profile
+    <main className="min-h-screen bg-white p-6 md:p-16">
+      <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-900">
+        Mening Profilim
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* User Info + Orders */}
-        <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Orders</h2>
+        {/* ===== ORDER ===== */}
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-lg p-8">
+          <h2 className="text-2xl font-bold mb-6 text-gray-900">Joriy Buyurtma</h2>
 
-          {localOrders.length === 0 ? (
-            <p className="text-gray-500">You have no orders yet.</p>
+          {!order ? (
+            <p className="text-gray-500">Hozirda buyurtma yo‘q</p>
           ) : (
-            localOrders.map((order) => (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="bg-zinc-50 p-4 rounded-2xl shadow-md flex flex-col gap-4 border-l-4 border-green-400"
-              >
-                <p className="font-semibold text-gray-900 mb-2">{order.fullName}</p>
-                <p className="text-gray-700 text-sm">{order.phone}</p>
-                <p className="text-gray-700 text-sm">{order.address}</p>
-
-                {/* Products */}
-                <div className="flex flex-wrap gap-4">
-                  {order.products.length > 0 ? (
-                    order.products.map((p, idx) => (
-                      <motion.div
-                        key={idx}
-                        whileHover={{ scale: 1.03 }}
-                        className="w-48 bg-white p-3 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
-                      >
-                        {p.images && p.images[0] && (
-                          <img
-                            src={p.images[0]}
-                            alt={p.title}
-                            className="w-full h-32 object-cover rounded-lg mb-2"
-                          />
-                        )}
-                        <p className="font-semibold text-gray-900">{p.title}</p>
-                        <p className="text-gray-700 text-sm">
-                          Color: {p.color ?? "N/A"} | Size: {p.size ?? "N/A"}
-                        </p>
-                        <p className="text-gray-700 text-sm">Quantity: {p.quantity}</p>
-                        <p className="text-gray-900 font-bold">${p.price ?? "N/A"}</p>
-                      </motion.div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500">No products in this order.</p>
-                  )}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              {/* INFO */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-semibold text-lg text-gray-900">{order.user.name}</p>
+                  <p className="text-sm text-gray-600">{order.user.phone}</p>
+                  <p className="text-sm text-gray-600">{order.user.address}</p>
                 </div>
+                <span className="px-4 py-1 rounded-full bg-gray-900 text-white text-sm font-semibold">
+                  {getStatusUz()}
+                </span>
+              </div>
 
-                {/* Timer & Status */}
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-gray-600 text-sm font-mono">
-                    Time: {formatTime(elapsedTime[order.id] ?? 0)} /{" "}
-                    {formatTime(order.deliveryTime)}
-                  </p>
-                  <p
-                    className={`font-bold px-3 py-1 rounded-xl ${
-                      order.status === "Zakaz qabul qilindi"
-                        ? "bg-yellow-300 text-yellow-900"
-                        : order.status === "Yo‘lga chiqdi"
-                        ? "bg-blue-300 text-blue-900"
-                        : "bg-green-300 text-green-900"
-                    }`}
-                  >
-                    {order.status}
-                  </p>
+              {/* PROGRESS BAR */}
+              <div>
+                <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gray-900 transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
+                <p className="text-sm text-gray-600 mt-2 font-mono">
+                  {formatTime(elapsed)} / {formatTime(deliveryTime)}
+                </p>
+              </div>
 
-                {/* Feedback form */}
-                {showFeedback[order.id] && (
-                  <div className="mt-4 p-4 bg-white rounded-xl shadow flex flex-col gap-4">
-                    <p className="font-semibold text-gray-900">
-                      Iltimos, xizmatimizni baholang:
-                    </p>
-                    <div className="flex gap-2 mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span
-                          key={star}
-                          className={`text-3xl cursor-pointer ${
-                            star <= (rating[order.id] || 0)
-                              ? "text-yellow-500"
-                              : "text-gray-300"
-                          }`}
-                          onClick={() =>
-                            setRating((prev) => ({ ...prev, [order.id]: star }))
-                          }
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                    <textarea
-                      value={comment[order.id] || ""}
-                      onChange={(e) =>
-                        setComment((prev) => ({ ...prev, [order.id]: e.target.value }))
-                      }
-                      placeholder="Fikringizni yozing..."
-                      className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                    <button
-                      onClick={() => handleSubmitFeedback(order.id)}
-                      className="px-4 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition"
+              {/* PRODUCTS OR CONFIRMATION */}
+              <div className="flex flex-wrap gap-4">
+                {order.products.length > 0 ? (
+                  order.products.map((p, i) => (
+                    <motion.div
+                      key={i}
+                      whileHover={{ scale: 1.03 }}
+                      className="w-48 border border-gray-200 rounded-2xl p-3 shadow-sm hover:shadow-md transition"
                     >
-                      Submit
-                    </button>
-                  </div>
+                      {p.images?.[0] && (
+                        <img
+                          src={p.images[0]}
+                          className="w-full h-32 object-cover rounded-xl mb-2"
+                        />
+                      )}
+                      <p className="font-semibold text-gray-900">{p.title}</p>
+                      <p className="text-sm text-gray-600">
+                        {p.color || "-"} · {p.size || "-"}
+                      </p>
+                      <p className="text-sm text-gray-600">Soni: {p.quantity}</p>
+                      <p className="font-bold text-gray-900">${p.price || "N/A"}</p>
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div
+                    className="w-full flex flex-col items-center justify-center p-8 bg-gray-100 rounded-2xl border border-gray-200"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <FaCheckCircle className="text-6xl text-green-500 mb-4" />
+                    <p className="text-gray-800 font-semibold text-lg">
+                      Sizning buyurtmangiz qabul qilindi ✅
+                    </p>
+                    <p className="text-gray-500 mt-2 text-center">
+                      Mahsulotlar hozircha ko‘rsatilmayapti
+                    </p>
+                  </motion.div>
                 )}
-              </motion.div>
-            ))
+              </div>
+            </motion.div>
           )}
         </div>
 
-        {/* Favorites */}
-        <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Favorite Products</h2>
+        {/* ===== FAVORITES ===== */}
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-lg p-8">
+          <h2 className="text-2xl font-bold mb-6 text-gray-900">Sevimli Mahsulotlar</h2>
+
           {favorites.length === 0 ? (
-            <p className="text-gray-500">You have no favorite products yet.</p>
+            <p className="text-gray-500">Sevimli mahsulot yo‘q</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 gap-6">
-              {favorites.map((product) => (
+            <div className="grid grid-cols-2 gap-6">
+              {favorites.map((p) => (
                 <motion.div
-                  key={product.slug}
+                  key={p.slug}
                   whileHover={{ scale: 1.05 }}
-                  className="bg-zinc-50 p-4 rounded-3xl shadow flex flex-col items-center gap-3 relative cursor-pointer"
                   onClick={() =>
-                    window.location.href = `/categories/products/${product.category}/${product.slug}`
+                    (window.location.href = `/categories/products/${p.category}/${p.slug}`)
                   }
+                  className="relative border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md cursor-pointer transition"
                 >
-                  {product.images && product.images[0] && (
+                  {p.images?.[0] && (
                     <img
-                      src={product.images[0]}
-                      alt={product.title}
-                      className="h-40 w-full object-contain mb-2"
+                      src={p.images[0]}
+                      className="h-36 w-full object-contain mb-2"
                     />
                   )}
-                  <h3 className="font-semibold text-center">{product.title}</h3>
-                  <span className="text-gray-900 font-bold">
-                    {product.discount ?? product.price}
-                  </span>
-                  <motion.button
+                  <p className="font-semibold text-center text-gray-900">{p.title}</p>
+                  <p className="text-center font-bold text-gray-900">
+                    ${p.price || "N/A"}
+                  </p>
+
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFavorite(product);
+                      toggleFavorite(p);
                     }}
-                    whileTap={{ scale: 0.8 }}
-                    className="absolute top-3 right-3 text-2xl"
+                    className="absolute top-3 right-3 text-xl text-gray-900"
                   >
-                    <AiFillHeart className="text-red-500" />
-                  </motion.button>
+                    <AiFillHeart />
+                  </button>
                 </motion.div>
               ))}
             </div>

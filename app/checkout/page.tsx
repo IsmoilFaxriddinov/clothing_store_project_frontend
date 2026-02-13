@@ -6,6 +6,16 @@ import { motion } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import CheckoutMap from "@/components/CheckoutMap";
 
+type CartItem = {
+  id: string;
+  title: string;
+  price: number;
+  image: string;
+  quantity: number;
+  color?: string;
+  size?: string;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, updateQuantity, updateColor, updateSize, removeFromCart } = useCart();
@@ -44,30 +54,37 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
+    const orderForFrontend = {
+      user: { name: fullName, phone, address },
+      items: cart.map((item) => ({
+        product: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        color: { name: item.color || "" },
+        size: { name: item.size || "" },
+      })),
+      discount,
+      promo_code: promo || undefined,
+      createdAt: new Date().toISOString(),
+      startTime: Date.now(),
+      distanceFactor: 1, // default yetkazib berish faktor
+    };
+
     try {
-      // ✅ 1 soniya kutish simulyatsiyasi
-      await new Promise((res) => setTimeout(res, 1000));
-
-      // Soxta order yaratish
-      const order = {
-        id: "order-" + Date.now(),
-        fullName,
-        phone,
-        address,
-        products: cart,
-        startTime: Date.now(),
-        distanceFactor: Math.random() * 2 + 1,
-        status: "Zakaz qabul qilindi",
-        deliveryTime: 0,
-      };
-
-      // LocalStorage ga saqlash (ProfilePage o‘qiy oladi)
+      // ===== LocalStorage ga saqlash =====
       const existing = localStorage.getItem("orders");
       const orders = existing ? JSON.parse(existing) : [];
-      localStorage.setItem("orders", JSON.stringify([...orders, order]));
+      localStorage.setItem("orders", JSON.stringify([...orders, orderForFrontend]));
+
+      // ===== Backendga yuborish =====
+      await fetch("http://localhost:1337/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: orderForFrontend }),
+      });
 
       setLoading(false);
-      router.push("/profile");
+      router.push("/profile"); // profilega yo‘naltirish
     } catch (err: any) {
       alert("Xato yuz berdi: " + err.message);
       setLoading(false);
@@ -85,7 +102,7 @@ export default function CheckoutPage() {
         <div>
           <h2 className="text-2xl font-semibold mb-6">Savatcha</h2>
           <div className="space-y-4">
-            {cart.map((item) => (
+            {cart.map((item: CartItem) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -186,10 +203,8 @@ export default function CheckoutPage() {
             className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
           />
 
-          {/* Map */}
           <CheckoutMap latLng={latLng} setLatLng={setLatLng} setAddress={setAddress} />
 
-          {/* Address tahrirlash */}
           {address && (
             <div className="flex items-center gap-2 mt-2">
               {editingAddress ? (
@@ -211,7 +226,6 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* Promo */}
           <div className="pt-4 flex gap-2">
             <input
               value={promo}
