@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AiFillHeart } from "react-icons/ai";
-import { FaCheckCircle } from "react-icons/fa"; // ✅ icon
+import { FaCheckCircle } from "react-icons/fa";
 import { useFavorite } from "../context/FavoriteContext";
 
-/* ===== TYPES ===== */
 type Product = {
   title: string;
   quantity: number;
@@ -20,76 +19,60 @@ type Product = {
 
 type Order = {
   id: string;
-  user: { name: string; phone: string; address: string };
-  products: Product[];
-  startTime: number;
+  user: { name: string | object; phone: string | object; address: string | object };
+  items?: Product[];
+  products?: Product[];
+  startTime?: number;
   distanceFactor?: number;
   discount?: number;
   promo_code?: string;
+  Statuss?: "new" | "on_way" | "delivered";
+  admin_message?: string;
 };
 
-/* ===== PAGE ===== */
 export default function ProfilePage() {
   const { favorites, toggleFavorite } = useFavorite();
-
   const [order, setOrder] = useState<Order | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [notified, setNotified] = useState(false);
+  const [timerActive, setTimerActive] = useState(false);
 
-  /* ===== LOAD LAST ORDER ===== */
-  useEffect(() => {
-    const stored = localStorage.getItem("orders");
-    if (stored) {
-      const orders = JSON.parse(stored);
-      if (orders.length > 0) {
-        const lastOrder = orders[orders.length - 1];
-
+  const fetchLastOrder = async () => {
+    try {
+      const res = await fetch("http://localhost:1337/api/orders/last");
+      const data = await res.json();
+      if (data.order) {
+        const lastOrder = data.order;
+        lastOrder.products = lastOrder.items || [];
+        lastOrder.Statuss = lastOrder.Statuss || lastOrder.status || "new";
         lastOrder.startTime = lastOrder.startTime || Date.now();
-        lastOrder.distanceFactor = lastOrder.distanceFactor || 1;
-        lastOrder.products = Array.isArray(lastOrder.products)
-          ? lastOrder.products
-          : [];
-
         setOrder(lastOrder);
       }
+    } catch (err) {
+      console.error("Buyurtma olishda xato:", err);
     }
+  };
+
+  useEffect(() => {
+    fetchLastOrder();
+    const interval = setInterval(fetchLastOrder, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  /* ===== TIMER ===== */
+  // Timer faqat "on_way" bo'lganda ishlaydi
   useEffect(() => {
-    if (!order) return;
-
-    const deliveryTime = Math.floor(30 * (order.distanceFactor || 1));
+    if (!order || order.Statuss !== "on_way") {
+      setTimerActive(false);
+      setElapsed(0);
+      return;
+    }
+    setTimerActive(true);
 
     const interval = setInterval(() => {
-      const now = Date.now();
-      let passed = Math.floor((now - order.startTime) / 1000);
-      if (passed > deliveryTime) passed = deliveryTime;
-      setElapsed(passed);
+      setElapsed(prev => prev + 1); // Sekundlar oshadi
     }, 1000);
 
     return () => clearInterval(interval);
   }, [order]);
-
-  /* ===== TELEGRAM NOTIFY ===== */
-  useEffect(() => {
-    if (!order || notified) return;
-
-    const deliveryTime = Math.floor(30 * (order.distanceFactor || 1));
-
-    if (elapsed >= deliveryTime && order.id) {
-      fetch("http://localhost:1337/api/orders/notify-delivered", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id }),
-      })
-        .then(() => setNotified(true))
-        .catch((err) => console.error("Telegram yuborilmadi", err));
-    }
-  }, [elapsed, order, notified]);
-
-  const deliveryTime = order ? Math.floor(30 * (order.distanceFactor || 1)) : 0;
-  const progress = deliveryTime ? Math.min((elapsed / deliveryTime) * 100, 100) : 0;
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60).toString().padStart(2, "0");
@@ -97,18 +80,22 @@ export default function ProfilePage() {
     return `${m}:${s}`;
   };
 
+  const getSafeString = (value: string | object | undefined) => {
+    if (!value) return "-";
+    return typeof value === "string" ? value : JSON.stringify(value);
+  };
+
   const getStatusUz = () => {
     if (!order) return "";
-    if (elapsed >= deliveryTime) return "Yetkazildi ✅";
-    if (elapsed >= deliveryTime / 2) return "Yo‘lga chiqdi 🚚";
-    return "Qabul qilindi 📝";
+    if (order.Statuss === "delivered") return "Yetkazildi ✅";
+    if (order.Statuss === "on_way") return "Yo‘lga chiqdi 🚚";
+    if (order.Statuss === "new") return "Admin javobini kuting ⏳";
+    return "";
   };
 
   return (
     <main className="min-h-screen bg-white p-6 md:p-16">
-      <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-900">
-        Mening Profilim
-      </h1>
+      <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-900">Mening Profilim</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* ===== ORDER ===== */}
@@ -118,72 +105,53 @@ export default function ProfilePage() {
           {!order ? (
             <p className="text-gray-500">Hozirda buyurtma yo‘q</p>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              {/* INFO */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              {/* BUYURTMA INFO */}
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold text-lg text-gray-900">{order.user.name}</p>
-                  <p className="text-sm text-gray-600">{order.user.phone}</p>
-                  <p className="text-sm text-gray-600">{order.user.address}</p>
+                  <p className="font-semibold text-lg text-gray-900">{getSafeString(order.user?.name)}</p>
+                  <p className="text-sm text-gray-600">{getSafeString(order.user?.phone)}</p>
+                  <p className="text-sm text-gray-600">{getSafeString(order.user?.address)}</p>
                 </div>
-                <span className="px-4 py-1 rounded-full bg-gray-900 text-white text-sm font-semibold">
-                  {getStatusUz()}
-                </span>
+                <span className="px-4 py-1 rounded-full bg-gray-900 text-white text-sm font-semibold">{getStatusUz()}</span>
               </div>
 
-              {/* PROGRESS BAR */}
-              <div>
-                <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gray-900 transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <p className="text-sm text-gray-600 mt-2 font-mono">
-                  {formatTime(elapsed)} / {formatTime(deliveryTime)}
+              {order.admin_message && (
+                <p className="mt-2 p-3 bg-yellow-100 text-yellow-900 rounded-lg border border-yellow-200">
+                  📢 Admin: {getSafeString(order.admin_message)}
                 </p>
-              </div>
+              )}
 
-              {/* PRODUCTS OR CONFIRMATION */}
-              <div className="flex flex-wrap gap-4">
-                {order.products.length > 0 ? (
-                  order.products.map((p, i) => (
+              {/* TIMER */}
+              {timerActive && (
+                <div>
+                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
                     <motion.div
-                      key={i}
-                      whileHover={{ scale: 1.03 }}
-                      className="w-48 border border-gray-200 rounded-2xl p-3 shadow-sm hover:shadow-md transition"
-                    >
-                      {p.images?.[0] && (
-                        <img
-                          src={p.images[0]}
-                          className="w-full h-32 object-cover rounded-xl mb-2"
-                        />
-                      )}
-                      <p className="font-semibold text-gray-900">{p.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {p.color || "-"} · {p.size || "-"}
-                      </p>
-                      <p className="text-sm text-gray-600">Soni: {p.quantity}</p>
-                      <p className="font-bold text-gray-900">${p.price || "N/A"}</p>
-                    </motion.div>
-                  ))
-                ) : (
+                      className="h-full bg-gray-900"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${elapsed * 2}%` }}
+                      transition={{ ease: "linear", duration: 1 }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2 font-mono">{formatTime(elapsed)}</p>
+                </div>
+              )}
+
+              {/* PRODUCTS PTICHKA */}
+              <div className="flex flex-wrap gap-4 justify-center items-center min-h-[200px]">
+                {(order.products || []).length > 0 ? (
                   <motion.div
-                    className="w-full flex flex-col items-center justify-center p-8 bg-gray-100 rounded-2xl border border-gray-200"
+                    className="w-full flex flex-col items-center justify-center bg-gray-100 rounded-2xl border border-gray-200 p-8"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
+                    <FaCheckCircle className="text-8xl text-gray-400 mb-4 animate-bounce" />
+                    <p className="text-gray-500 font-semibold text-lg">Mahsulotlar hozir ko‘rinmayapti</p>
+                  </motion.div>
+                ) : (
+                  <motion.div className="w-full flex flex-col items-center justify-center p-8 bg-gray-100 rounded-2xl border border-gray-200" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <FaCheckCircle className="text-6xl text-green-500 mb-4" />
-                    <p className="text-gray-800 font-semibold text-lg">
-                      Sizning buyurtmangiz qabul qilindi ✅
-                    </p>
-                    <p className="text-gray-500 mt-2 text-center">
-                      Mahsulotlar hozircha ko‘rsatilmayapti
-                    </p>
+                    <p className="text-gray-800 font-semibold text-lg">Buyurtmangiz qabul qilindi ✅</p>
                   </motion.div>
                 )}
               </div>
@@ -194,7 +162,6 @@ export default function ProfilePage() {
         {/* ===== FAVORITES ===== */}
         <div className="bg-white rounded-3xl border border-gray-200 shadow-lg p-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Sevimli Mahsulotlar</h2>
-
           {favorites.length === 0 ? (
             <p className="text-gray-500">Sevimli mahsulot yo‘q</p>
           ) : (
@@ -203,28 +170,22 @@ export default function ProfilePage() {
                 <motion.div
                   key={p.slug}
                   whileHover={{ scale: 1.05 }}
-                  onClick={() =>
-                    (window.location.href = `/categories/products/${p.category}/${p.slug}`)
-                  }
-                  className="relative border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md cursor-pointer transition"
+                  onClick={() => window.location.href = `/categories/products/${p.category}/${p.slug}`}
+                  className="relative border border-gray-200 rounded-2xl shadow-sm overflow-hidden cursor-pointer group"
                 >
                   {p.images?.[0] && (
-                    <img
-                      src={p.images[0]}
-                      className="h-36 w-full object-contain mb-2"
-                    />
+                    <img src={p.images[0]} className="h-36 w-full object-contain transition-transform duration-300 group-hover:scale-110" />
                   )}
-                  <p className="font-semibold text-center text-gray-900">{p.title}</p>
-                  <p className="text-center font-bold text-gray-900">
-                    ${p.price || "N/A"}
-                  </p>
-
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 rounded-b-2xl">
+                    <p className="text-white font-semibold text-center">{getSafeString(p.title)}</p>
+                    <p className="text-white font-bold text-center">${p.price || "N/A"}</p>
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleFavorite(p);
                     }}
-                    className="absolute top-3 right-3 text-xl text-gray-900"
+                    className="absolute top-3 right-3 text-xl text-white z-10"
                   >
                     <AiFillHeart />
                   </button>
@@ -237,3 +198,4 @@ export default function ProfilePage() {
     </main>
   );
 }
+
