@@ -1,52 +1,123 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-// Products data with more details
-const products = [
-  { category: "pants", slug: "red-pants", title: "Red Pants", price: "$20", discount: "$15", rating: 4, src: "/product-pants.png", colors: ["Red", "Blue"], sizes: ["S", "M", "L"], new: true, ageGroup: "3-8 years" },
-  { category: "pants", slug: "blue-pants", title: "Blue Pants", price: "$22", discount: "$18", rating: 5, src: "/product-pants2.png", colors: ["Blue", "Green"], sizes: ["M", "L", "XL"], new: false, ageGroup: "4-9 years" },
-  { category: "pants", slug: "green-pants", title: "Green Pants", price: "$25", rating: 4, src: "/product-pants3.png", colors: ["Green"], sizes: ["S", "M"], new: false, ageGroup: "5-10 years" },
-  { category: "shoes", slug: "red-shoes", title: "Red Shoes", price: "$30", discount: "$25", rating: 5, src: "/product-shoes.png", colors: ["Red"], sizes: ["M", "L"], new: true, ageGroup: "3-10 years" },
-  { category: "shoes", slug: "blue-shoes", title: "Blue Shoes", price: "$35", rating: 4, src: "/product-shoes2.png", colors: ["Blue"], sizes: ["S", "M", "L"], new: false, ageGroup: "5-12 years" },
-  { category: "jackets", slug: "green-jacket", title: "Green Jacket", price: "$48", discount: "$42", rating: 5, src: "/product-jacket3.png", colors: ["Green"], sizes: ["S", "M"], new: false, ageGroup: "6-12 years" },
-  { category: "jackets", slug: "red-jacket", title: "Red Jacket", price: "$45", rating: 4, src: "/product-jacket.png", colors: ["Red"], sizes: ["S", "M", "L"], new: true, ageGroup: "5-12 years" },
-  { category: "accessories", slug: "red-hat", title: "Red Hat", price: "$15", rating: 4, src: "/product-hat.png", colors: ["Red", "Yellow", "Blue"], sizes: ["S", "M"], new: true, ageGroup: "3-8 years" },
-  { category: "accessories", slug: "blue-hat", title: "Blue Hat", price: "$18", discount: "$14", rating: 5, src: "/product-hat2.png", colors: ["Blue"], sizes: ["M", "L"], new: false, ageGroup: "4-10 years" },
-];
+type Product = {
+  id: number; // ID qo‘shildi
+  title: string;
+  slug: string;
+  category: string;
+  price?: string;
+  discount?: string;
+  rating?: number;
+  src?: string;
+  colors?: string[];
+  sizes?: string[];
+  new?: boolean;
+  ageGroup: string; // frontend uchun yagona string, default "All"
+};
+
+// ===== LOOKUP MAPS =====
+const colorMap: Record<number, string> = {
+  5: "Red", 6: "Blue", 7: "Green", 8: "Yellow",
+  9: "Black", 10: "Gray", 11: "Blue", 12: "Brown",
+  13: "Orange", 14: "Purple", 15: "White", 16: "Pink",
+};
+const sizeMap: Record<number, string> = {
+  5: "S", 6: "M", 7: "L", 8: "XL", 9: "XS", 10: "M",
+  11: "S", 12: "L", 13: "M", 14: "L", 15: "XL", 16: "S", 17: "M",
+};
 
 export default function ProductsPage() {
   const params = useParams();
   const slug = params?.slug as string | undefined;
   const router = useRouter();
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAge, setSelectedAge] = useState<string>("");
 
+  // ================== FETCH PRODUCTS ==================
+  useEffect(() => {
+    fetch("http://localhost:1337/api/products/all")
+      .then((res) => res.json())
+      .then((data) => {
+        const mapped: Product[] = data.map((p: any) => ({
+          id: p.id, // ID qo‘shildi
+          title: p.title,
+          slug: p.slug || p.title.toLowerCase().replace(/\s+/g, "-"),
+          category: p.category?.name || "unknown",
+          price: p.price ? `$${p.price}` : undefined,
+          discount: p.discount_price ? `$${p.discount_price}` : undefined,
+          rating: 4,
+          src: p.image_1?.[0]?.url
+            ? `http://localhost:1337${p.image_1[0].url}`
+            : "/placeholder.png",
+          colors: p.colors?.map((c: any) => c.name || colorMap[c.id]).filter(Boolean) || [],
+          sizes: p.sizes?.map((s: any) => s.name || sizeMap[s.id]).filter(Boolean) || [],
+          new: false,
+          ageGroup: p.ages?.length
+            ? p.ages.map((a: any) => a.name).join(", ")
+            : "All", // default "All" bo‘sh ages uchun
+        }));
+        setProducts(mapped);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Fetch error:", err);
+        setLoading(false);
+      });
+  }, []);
+
   const categories = Array.from(new Set(products.map((p) => p.category)));
-  const ageGroups = ["3-5 years", "6-8 years", "9-12 years"];
+  const ageGroups = ["All", "3-5", "5-7", "6-8", "9-12"];
 
+  // ================== FILTER PRODUCTS ==================
   const finalProducts = products.filter((p) => {
-    const slugMatch = !slug || p.category === slug;
-    const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(p.category);
-    const sizeMatch = selectedSizes.length === 0 || selectedSizes.some((s) => p.sizes.includes(s));
-    const colorMatch = selectedColors.length === 0 || selectedColors.some((c) => p.colors.includes(c));
-    let ageMatch = true;
+    const slugMatch = !slug || p.category.toLowerCase() === slug.toLowerCase();
+    const categoryMatch =
+      selectedCategories.length === 0 ||
+      selectedCategories.some(
+        (cat) => cat.toLowerCase() === p.category.toLowerCase()
+      );
 
-    if (selectedAge) {
-      // Age filter: check if product ageGroup overlaps with selectedAge
-      const [prodMin, prodMax] = p.ageGroup.split("-").map((v) => parseInt(v));
-      const [selMin, selMax] = selectedAge.split("-").map((v) => parseInt(v));
+    const sizeMatch =
+      selectedSizes.length === 0 ||
+      (p.sizes &&
+        p.sizes.some((size) =>
+          selectedSizes.map((s) => s.toUpperCase()).includes(size.toUpperCase())
+        ));
+
+    const colorMatch =
+      selectedColors.length === 0 ||
+      (p.colors &&
+        p.colors.some((color) =>
+          selectedColors.map((c) => c.toLowerCase()).includes(color.toLowerCase())
+        ));
+
+    let ageMatch = true;
+    if (selectedAge && selectedAge !== "All") {
+      const parseAge = (str: string) => {
+        const match = str.match(/(\d+)-(\d+)/);
+        return match ? [parseInt(match[1]), parseInt(match[2])] : [0, 100];
+      };
+      const [prodMin, prodMax] = parseAge(p.ageGroup);
+      const [selMin, selMax] = parseAge(selectedAge);
       ageMatch = prodMax >= selMin && prodMin <= selMax;
     }
 
     return slugMatch && categoryMatch && sizeMatch && colorMatch && ageMatch;
   });
 
+  if (loading) return <div className="text-center mt-20">Loading products...</div>;
+
+  // ================== RENDER ==================
   return (
     <main className="bg-gradient-to-b from-pink-50 to-blue-50 min-h-screen text-gray-900 px-6 md:px-16 py-12">
       <h1 className="text-4xl md:text-5xl font-extrabold mb-10 text-pink-700">
@@ -111,24 +182,28 @@ export default function ProductsPage() {
           {/* COLOR FILTER */}
           <h3 className="font-bold text-lg mb-4 text-pink-700">Color</h3>
           <div className="flex gap-3 flex-wrap mb-6">
-            {["Red", "Blue", "Green", "Yellow"].map((c) => (
-              <motion.button
-                key={c}
-                onClick={() =>
-                  setSelectedColors(
+            {["Red", "Blue", "Green", "Yellow", "Black", "White", "Pink", "Purple"].map(
+              (c) => (
+                <motion.button
+                  key={c}
+                  onClick={() =>
+                    setSelectedColors(
+                      selectedColors.includes(c)
+                        ? selectedColors.filter((col) => col !== c)
+                        : [...selectedColors, c]
+                    )
+                  }
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`w-9 h-9 rounded-full border-2 transition shadow-md ${
                     selectedColors.includes(c)
-                      ? selectedColors.filter((col) => col !== c)
-                      : [...selectedColors, c]
-                  )
-                }
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                className={`w-9 h-9 rounded-full border-2 transition shadow-md ${
-                  selectedColors.includes(c) ? "border-black scale-110" : "border-gray-200"
-                }`}
-                style={{ backgroundColor: c.toLowerCase() }}
-              />
-            ))}
+                      ? "border-black scale-110"
+                      : "border-gray-200"
+                  }`}
+                  style={{ backgroundColor: c.toLowerCase() }}
+                />
+              )
+            )}
           </div>
 
           {/* AGE FILTER */}
@@ -156,9 +231,9 @@ export default function ProductsPage() {
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {finalProducts.map((product) => (
             <motion.div
-              key={product.slug}
+              key={product.id} // slug o‘rniga ID
               onClick={() =>
-                router.push(`/categories/products/${product.category}/${product.slug}`)
+                router.push(`/categories/products/${product.id}`) // ID bo‘yicha
               }
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -170,6 +245,7 @@ export default function ProductsPage() {
                 </span>
               )}
 
+              {/* IMAGE */}
               <div className="w-full h-64 mx-auto mb-4 relative">
                 <img
                   src={product.src}
@@ -178,41 +254,18 @@ export default function ProductsPage() {
                 />
               </div>
 
+              {/* TITLE */}
               <h3 className="font-bold text-lg mb-2">{product.title}</h3>
 
-              <div className="flex justify-center items-center gap-2 mb-2">
+              {/* PRICE */}
+              <div className="flex justify-center items-center gap-2 mb-4">
                 <span className="text-pink-700 font-extrabold text-xl">
                   {product.discount ? product.discount : product.price}
                 </span>
                 {product.discount && (
-                  <span className="text-gray-400 line-through">{product.price}</span>
-                )}
-              </div>
-
-              {/* RATING */}
-              <div className="flex justify-center mb-3">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <span
-                    key={i}
-                    className={`text-yellow-400 ${i < product.rating ? "text-yellow-400" : "text-gray-300"}`}
-                  >
-                    ★
+                  <span className="text-gray-400 line-through">
+                    {product.price}
                   </span>
-                ))}
-              </div>
-
-              {/* COLORS */}
-              <div className="flex justify-center items-center gap-2 flex-wrap mb-4">
-                {product.colors.map((color, idx) => idx < 4 && (
-                  <span
-                    key={color}
-                    className="w-6 h-6 rounded-full border border-gray-200 shadow-inner"
-                    style={{ backgroundColor: color.toLowerCase() }}
-                    title={color}
-                  ></span>
-                ))}
-                {product.colors.length > 4 && (
-                  <span className="text-gray-500 text-sm">+{product.colors.length - 4}</span>
                 )}
               </div>
 

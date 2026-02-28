@@ -14,6 +14,8 @@ type CartItem = {
   quantity: number;
   color?: string;
   size?: string;
+  availableColors?: string[];
+  availableSizes?: string[];
 };
 
 export default function CheckoutPage() {
@@ -55,28 +57,35 @@ export default function CheckoutPage() {
     setLoading(true);
 
     const orderForFrontend = {
-      user: { name: fullName, phone, address },
+      user: {
+        name: fullName,
+        phone,
+        address,
+        location: { latitude: latLng.lat, longitude: latLng.lng }, // <-- Qo‘shildi
+      },
       items: cart.map((item) => ({
-        product: item.id,
+        id: item.id,
+        title: item.title,
         quantity: item.quantity,
         price: item.price,
-        color: { name: item.color || "" },
-        size: { name: item.size || "" },
+        color: item.color || "",
+        size: item.size || "",
       })),
       discount,
       promo_code: promo || undefined,
-      createdAt: new Date().toISOString(),
+      Statuss: "new",
       startTime: Date.now(),
-      distanceFactor: 1, // default yetkazib berish faktor
+      distanceFactor: 1,
+      createdAt: new Date().toISOString(),
     };
 
     try {
-      // ===== LocalStorage ga saqlash =====
+      // LocalStorage uchun
       const existing = localStorage.getItem("orders");
       const orders = existing ? JSON.parse(existing) : [];
       localStorage.setItem("orders", JSON.stringify([...orders, orderForFrontend]));
 
-      // ===== Backendga yuborish =====
+      // Strapi API-ga jo'natish
       await fetch("http://localhost:1337/api/orders/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,11 +93,18 @@ export default function CheckoutPage() {
       });
 
       setLoading(false);
-      router.push("/profile"); // profilega yo‘naltirish
+      router.push("/profile");
     } catch (err: any) {
       alert("Xato yuz berdi: " + err.message);
       setLoading(false);
     }
+  };
+
+  // Telefon formatlash funksiyasi
+  const formatPhone = (value: string) => {
+    let digits = value.replace(/\D/g, "");
+    if (digits.startsWith("998")) digits = digits.slice(3);
+    return "+(998)" + digits.slice(0, 9);
   };
 
   return (
@@ -117,26 +133,36 @@ export default function CheckoutPage() {
                 <div className="flex-1 space-y-1">
                   <h3 className="font-semibold">{item.title}</h3>
                   <div className="flex gap-2 items-center">
-                    <select
-                      value={item.color}
-                      onChange={(e) => updateColor(item.id, e.target.value)}
-                      className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
-                    >
-                      <option>Red</option>
-                      <option>Blue</option>
-                      <option>Black</option>
-                    </select>
-                    <select
-                      value={item.size}
-                      onChange={(e) => updateSize(item.id, e.target.value)}
-                      className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
-                    >
-                      <option>S</option>
-                      <option>M</option>
-                      <option>L</option>
-                    </select>
+                    {item.availableColors?.length > 0 && (
+                      <select
+                        value={item.color || ""}
+                        onChange={(e) => updateColor(item.id, e.target.value)}
+                        className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
+                      >
+                        <option value="">Rangni tanlang</option>
+                        {item.availableColors.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {item.availableSizes?.length > 0 && (
+                      <select
+                        value={item.size || ""}
+                        onChange={(e) => updateSize(item.id, e.target.value)}
+                        className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
+                      >
+                        <option value="">O‘lchamni tanlang</option>
+                        {item.availableSizes.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
-                  <p className="font-bold">${item.price}</p>
+                  <p className="font-bold">${item.price.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <input
@@ -161,7 +187,7 @@ export default function CheckoutPage() {
             ))}
           </div>
 
-          {/* Total */}
+          {/* TOTAL */}
           <div className="mt-6 bg-gray-100 p-5 rounded-2xl shadow space-y-2">
             <div className="flex justify-between text-gray-700">
               <span>Jami</span>
@@ -180,13 +206,12 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Form */}
+        {/* FORM */}
         <form
           onSubmit={handlePurchase}
           className="bg-gray-100 p-8 rounded-2xl shadow space-y-4"
         >
           <h2 className="text-2xl font-semibold text-pink-500">Yetkazib berish</h2>
-
           <input
             placeholder="To‘liq ism"
             value={fullName}
@@ -194,17 +219,15 @@ export default function CheckoutPage() {
             required
             className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
           />
-
           <input
-            placeholder="Telefon raqam"
+            type="tel"
+            placeholder="+998 90 123 45 67"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
             required
             className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
           />
-
           <CheckoutMap latLng={latLng} setLatLng={setLatLng} setAddress={setAddress} />
-
           {address && (
             <div className="flex items-center gap-2 mt-2">
               {editingAddress ? (
@@ -226,6 +249,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* PROMO */}
           <div className="pt-4 flex gap-2">
             <input
               value={promo}
