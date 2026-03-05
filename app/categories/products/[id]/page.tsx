@@ -113,7 +113,6 @@ export default function ProductDetailPage() {
     setAdding(true);
     setTimeout(() => {
       setAdding(false);
-      router.push("/products");
     }, 1000);
   };
 

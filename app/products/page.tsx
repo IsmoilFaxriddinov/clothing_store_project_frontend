@@ -16,7 +16,7 @@ type Product = {
   colors?: string[];
   sizes?: string[];
   new?: boolean;
-  ageGroup: string; // frontend uchun yagona string, default "All"
+  ageGroup: string;
 };
 
 // ===== LOOKUP MAPS =====
@@ -156,7 +156,7 @@ export default function ProductsPage() {
           {/* SIZE FILTER */}
           <h3 className="font-bold text-lg mb-4 text-pink-700">Size</h3>
           <div className="flex flex-wrap gap-2 mb-6">
-            {["S", "M", "L", "XL"].map((size) => (
+            {["S", "M", "X", "L", "XL"].map((size) => (
               <motion.button
                 key={size}
                 onClick={() =>

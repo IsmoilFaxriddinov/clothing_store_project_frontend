@@ -39,15 +39,33 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const total = subtotal - discount;
 
-  const applyPromo = () => {
-    if (promo.toUpperCase() === "SALE10") {
-      setDiscount(subtotal * 0.1);
+  // -------------------- PROMO CODE FUNKSIYASI --------------------
+  const applyPromo = async () => {
+  if (!promo) return;
+
+  try {
+    const res = await fetch("http://localhost:1337/api/promo-code/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { code: promo } }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      const calculatedDiscount = (subtotal * data.discount) / 100; // ✅ foiz hisoblash
+      setDiscount(calculatedDiscount);
       setPromoError("");
     } else {
       setDiscount(0);
-      setPromoError("Promo kodi noto‘g‘ri");
+      setPromoError(data.message || "Promo kodi noto‘g‘ri");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    setDiscount(0);
+    setPromoError("Server bilan bog‘lanishda xatolik yuz berdi");
+  }
+};
 
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
