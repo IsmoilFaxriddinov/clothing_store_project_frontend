@@ -1,11 +1,13 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AiFillHeart } from "react-icons/ai";
 import { useCart } from "@/app/context/CartContext";
 import { useFavorite } from "@/app/context/FavoriteContext";
+import { useLang } from "@/app/context/LangContext";
+import { getDictionary } from "@/app/lib/i18n";
 
 type Product = {
   id: number;
@@ -21,9 +23,11 @@ type Product = {
 
 export default function ProductDetailPage() {
   const { id } = useParams();
-  const router = useRouter();
   const { addToCart } = useCart();
   const { favorites, toggleFavorite } = useFavorite();
+
+  const { lang } = useLang();
+  const t = getDictionary(lang);
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,9 +56,8 @@ export default function ProductDetailPage() {
 
         const attr = data.attributes || data;
 
-        // 🔹 IMAGES
         const images: string[] = [];
-        ["image_1", "image_2", "image_3", "image_4", "image_5"].forEach((key) => {
+        ["image_1","image_2","image_3","image_4","image_5"].forEach((key) => {
           if (attr[key]?.length) {
             attr[key].forEach((img: any) => {
               if (img?.url) images.push(`http://localhost:1337${img.url}`);
@@ -62,7 +65,6 @@ export default function ProductDetailPage() {
           }
         });
 
-        // 🔹 COLORS, SIZES, AGES
         const color: string[] = Array.from(new Set(attr.color || []));
         const sizes: string[] = Array.from(new Set(attr.sizes || []));
         const ages: string[] = Array.from(new Set(attr.ages || []));
@@ -93,7 +95,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!selectedColor || !selectedSize || !selectedAge) {
-      alert("Please select a color, size and age!");
+      alert(t.select_color_size_age);
       return;
     }
 
@@ -122,12 +124,13 @@ export default function ProductDetailPage() {
     setLiked((prev) => !prev);
   };
 
-  if (loading) return <div className="text-center mt-20">Loading...</div>;
-  if (!product) return <div className="text-center mt-20">Product not found</div>;
+  if (loading) return <div className="text-center mt-20">{t.loading_products}</div>;
+  if (!product) return <div className="text-center mt-20">{t.product_not_found}</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-purple-50 to-blue-50 p-6 md:p-16">
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-start">
+
         {/* IMAGE */}
         <div className="bg-white rounded-3xl shadow-xl p-6 relative">
           {product.discount_price && (
@@ -135,6 +138,7 @@ export default function ProductDetailPage() {
               SALE
             </span>
           )}
+
           <motion.img
             key={product.images[activeImage]}
             src={product.images[activeImage]}
@@ -144,38 +148,45 @@ export default function ProductDetailPage() {
             transition={{ duration: 0.3 }}
             className="w-full h-[400px] md:h-[500px] object-contain rounded-2xl mb-4"
           />
+
           <div className="flex gap-3 justify-center">
             {product.images.map((img, i) => (
               <button
                 key={i}
                 onClick={() => setActiveImage(i)}
                 className={`w-20 h-20 rounded-xl border overflow-hidden transition
-                  ${activeImage === i
-                    ? "border-pink-600 ring-2 ring-pink-400"
-                    : "border-gray-200 opacity-70 hover:opacity-100"
-                  }`}
+                ${activeImage === i
+                  ? "border-pink-600 ring-2 ring-pink-400"
+                  : "border-gray-200 opacity-70 hover:opacity-100"
+                }`}
               >
-                <img src={img} alt="thumb" className="w-full h-full object-contain" />
+                <img src={img} className="w-full h-full object-contain"/>
               </button>
             ))}
           </div>
         </div>
 
-        {/* PRODUCT INFO */}
+        {/* INFO */}
         <div>
-          <h1 className="text-4xl md:text-5xl font-bold text-pink-700 mb-2">{product.title}</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-pink-700 mb-2">
+            {product.title}
+          </h1>
 
           <div className="flex gap-3 mb-4 items-center">
             <span className="text-2xl font-extrabold text-pink-700">
               ${product.discount_price ?? product.price}
             </span>
+
             {product.discount_price && (
-              <span className="line-through text-gray-400">${product.price}</span>
+              <span className="line-through text-gray-400">
+                ${product.price}
+              </span>
             )}
+
             <motion.button
               onClick={handleToggleFavorite}
               whileTap={{ scale: 0.8 }}
-              className="ml-4 text-3xl relative"
+              className="ml-4 text-3xl"
             >
               <AiFillHeart className={liked ? "text-red-500" : "text-gray-300"} />
             </motion.button>
@@ -185,7 +196,7 @@ export default function ProductDetailPage() {
 
           {/* COLORS */}
           <div className="mb-6">
-            <h3 className="font-semibold mb-2 text-gray-900">Colors</h3>
+            <h3 className="font-semibold mb-2 text-gray-900">{t.color}</h3>
             <div className="flex gap-3">
               {product.color.map((c) => (
                 <button
@@ -203,42 +214,37 @@ export default function ProductDetailPage() {
 
           {/* SIZES */}
           <div className="mb-6">
-            <h3 className="font-semibold mb-2 text-gray-900">Sizes</h3>
+            <h3 className="font-semibold mb-2 text-gray-900">{t.size}</h3>
             <div className="flex gap-3 flex-wrap">
-              {product.sizes.length > 0 ? (
-                product.sizes.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSelectedSize(s)}
-                    className={`px-5 py-2 rounded-lg border-2 font-semibold transition
-                      ${selectedSize === s
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-black border-black hover:bg-black hover:text-white"
-                      }`}
-                  >
-                    {s}
-                  </button>
-                ))
-              ) : (
-                <span className="text-gray-400">No sizes available</span>
-              )}
+              {product.sizes.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSelectedSize(s)}
+                  className={`px-5 py-2 rounded-lg border-2 font-semibold transition
+                  ${selectedSize === s
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-black border-black hover:bg-black hover:text-white"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* AGES */}
           <div className="mb-6">
-            <h3 className="font-semibold mb-2 text-gray-900">Age</h3>
+            <h3 className="font-semibold mb-2 text-gray-900">{t.age}</h3>
             <div className="flex gap-3 flex-wrap">
-              {product.ages.map((a) => (
+              {product.ages?.map((a) => (
                 <button
                   key={a}
                   onClick={() => setSelectedAge(a)}
                   className={`px-4 py-2 rounded-lg border-2 font-semibold transition
-                    ${selectedAge === a
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-black hover:bg-black hover:text-white"
-                    }`}
-                  disabled={a === "N/A"}
+                  ${selectedAge === a
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-black border-black hover:bg-black hover:text-white"
+                  }`}
                 >
                   {a}
                 </button>
@@ -246,15 +252,14 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* ADD TO CART */}
           <motion.button
             onClick={handleAddToCart}
             disabled={adding}
             whileTap={{ scale: 0.95 }}
             className={`w-full md:w-auto px-8 py-3 rounded-xl font-semibold transition
-              ${adding ? "bg-black text-white" : "bg-pink-600 text-white hover:bg-pink-700"}`}
+            ${adding ? "bg-black text-white" : "bg-pink-600 text-white hover:bg-pink-700"}`}
           >
-            {adding ? "✅ Added to Cart" : "Add to Cart 🛒"}
+            {adding ? `✅ ${t.added_to_cart}` : `${t.add_to_cart} 🛒`}
           </motion.button>
         </div>
       </div>

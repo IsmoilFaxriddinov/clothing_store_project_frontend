@@ -3,9 +3,11 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useLang } from "../context/LangContext"; // ✅ lang context
+import { getDictionary } from "../lib/i18n";
 
 type Product = {
-  id: number; // ID qo‘shildi
+  id: number;
   title: string;
   slug: string;
   category: string;
@@ -31,6 +33,9 @@ const sizeMap: Record<number, string> = {
 };
 
 export default function ProductsPage() {
+  const { lang } = useLang(); // ✅ global lang
+  const t = getDictionary(lang); // ✅ dictionary
+
   const params = useParams();
   const slug = params?.slug as string | undefined;
   const router = useRouter();
@@ -49,10 +54,10 @@ export default function ProductsPage() {
       .then((res) => res.json())
       .then((data) => {
         const mapped: Product[] = data.map((p: any) => ({
-          id: p.id, // ID qo‘shildi
+          id: p.id,
           title: p.title,
           slug: p.slug || p.title.toLowerCase().replace(/\s+/g, "-"),
-          category: p.category?.name || "unknown",
+          category: p.category?.name || t.unknown_category, // ✅ tilga
           price: p.price ? `$${p.price}` : undefined,
           discount: p.discount_price ? `$${p.discount_price}` : undefined,
           rating: 4,
@@ -64,7 +69,7 @@ export default function ProductsPage() {
           new: false,
           ageGroup: p.ages?.length
             ? p.ages.map((a: any) => a.name).join(", ")
-            : "All", // default "All" bo‘sh ages uchun
+            : t.all_ages, // ✅ tilga
         }));
         setProducts(mapped);
         setLoading(false);
@@ -73,10 +78,10 @@ export default function ProductsPage() {
         console.error("Fetch error:", err);
         setLoading(false);
       });
-  }, []);
+  }, [t]);
 
   const categories = Array.from(new Set(products.map((p) => p.category)));
-  const ageGroups = ["All", "3-5", "5-7", "6-8", "9-12"];
+  const ageGroups = [t.all_ages, "3-5", "5-7", "6-8", "9-12"]; // ✅ "All" tilga
 
   // ================== FILTER PRODUCTS ==================
   const finalProducts = products.filter((p) => {
@@ -102,7 +107,7 @@ export default function ProductsPage() {
         ));
 
     let ageMatch = true;
-    if (selectedAge && selectedAge !== "All") {
+    if (selectedAge && selectedAge !== t.all_ages) {
       const parseAge = (str: string) => {
         const match = str.match(/(\d+)-(\d+)/);
         return match ? [parseInt(match[1]), parseInt(match[2])] : [0, 100];
@@ -115,20 +120,20 @@ export default function ProductsPage() {
     return slugMatch && categoryMatch && sizeMatch && colorMatch && ageMatch;
   });
 
-  if (loading) return <div className="text-center mt-20">Loading products...</div>;
+  if (loading) return <div className="text-center mt-20">{t.loading_products}</div>;
 
   // ================== RENDER ==================
   return (
     <main className="bg-gradient-to-b from-pink-50 to-blue-50 min-h-screen text-gray-900 px-6 md:px-16 py-12">
       <h1 className="text-4xl md:text-5xl font-extrabold mb-10 text-pink-700">
-        {slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : "All"} Products
+        {slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : t.all_products} {/* ✅ til */}
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* FILTER PANEL */}
         <aside className="bg-white rounded-3xl shadow-xl p-6 h-fit sticky top-24">
           {/* CATEGORY FILTER */}
-          <h3 className="font-bold text-lg mb-4 text-pink-700">Category</h3>
+          <h3 className="font-bold text-lg mb-4 text-pink-700">{t.category}</h3>
           <div className="flex flex-wrap gap-2 mb-6">
             {categories.map((cat) => (
               <motion.button
@@ -154,7 +159,7 @@ export default function ProductsPage() {
           </div>
 
           {/* SIZE FILTER */}
-          <h3 className="font-bold text-lg mb-4 text-pink-700">Size</h3>
+          <h3 className="font-bold text-lg mb-4 text-pink-700">{t.size}</h3>
           <div className="flex flex-wrap gap-2 mb-6">
             {["S", "M", "X", "L", "XL"].map((size) => (
               <motion.button
@@ -180,7 +185,7 @@ export default function ProductsPage() {
           </div>
 
           {/* COLOR FILTER */}
-          <h3 className="font-bold text-lg mb-4 text-pink-700">Color</h3>
+          <h3 className="font-bold text-lg mb-4 text-pink-700">{t.color}</h3>
           <div className="flex gap-3 flex-wrap mb-6">
             {["Red", "Blue", "Green", "Yellow", "Black", "White", "Pink", "Purple"].map(
               (c) => (
@@ -207,7 +212,7 @@ export default function ProductsPage() {
           </div>
 
           {/* AGE FILTER */}
-          <h3 className="font-bold text-lg mb-4 text-pink-700">Age</h3>
+          <h3 className="font-bold text-lg mb-4 text-pink-700">{t.age}</h3>
           <div className="flex flex-wrap gap-2 mb-6">
             {ageGroups.map((age) => (
               <motion.button
@@ -231,9 +236,9 @@ export default function ProductsPage() {
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {finalProducts.map((product) => (
             <motion.div
-              key={product.id} // slug o‘rniga ID
+              key={product.id}
               onClick={() =>
-                router.push(`/categories/products/${product.id}`) // ID bo‘yicha
+                router.push(`/categories/products/${product.id}`)
               }
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -241,11 +246,10 @@ export default function ProductsPage() {
             >
               {product.new && (
                 <span className="absolute top-4 left-4 bg-pink-500 text-white px-3 py-1 text-xs rounded-full font-bold z-10">
-                  NEW
+                  {t.new}
                 </span>
               )}
 
-              {/* IMAGE */}
               <div className="w-full h-64 mx-auto mb-4 relative">
                 <img
                   src={product.src}
@@ -254,10 +258,8 @@ export default function ProductsPage() {
                 />
               </div>
 
-              {/* TITLE */}
               <h3 className="font-bold text-lg mb-2">{product.title}</h3>
 
-              {/* PRICE */}
               <div className="flex justify-center items-center gap-2 mb-4">
                 <span className="text-pink-700 font-extrabold text-xl">
                   {product.discount ? product.discount : product.price}
@@ -269,9 +271,8 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              {/* ADD TO CART */}
               <button className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-full font-semibold transition transform hover:scale-105">
-                Add to Cart
+                {t.add_to_cart}
               </button>
             </motion.div>
           ))}

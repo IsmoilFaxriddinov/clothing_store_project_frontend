@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import CheckoutMap from "@/components/CheckoutMap";
+import { useLang } from "../context/LangContext"; // global lang
+import { getDictionary } from "../lib/i18n"; // dictionary
 
 type CartItem = {
   id: string;
@@ -21,6 +23,8 @@ type CartItem = {
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, updateQuantity, updateColor, updateSize, removeFromCart } = useCart();
+  const { lang } = useLang(); // global lang
+  const t = getDictionary(lang); // dictionary
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,38 +43,39 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const total = subtotal - discount;
 
-  // -------------------- PROMO CODE FUNKSIYASI --------------------
+  // -------------------- PROMO CODE --------------------
   const applyPromo = async () => {
-  if (!promo) return;
+    if (!promo) return;
 
-  try {
-    const res = await fetch("http://localhost:1337/api/promo-code/validate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: { code: promo } }),
-    });
+    try {
+      const res = await fetch("http://localhost:1337/api/promo-code/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: { code: promo } }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      const calculatedDiscount = (subtotal * data.discount) / 100; // ✅ foiz hisoblash
-      setDiscount(calculatedDiscount);
-      setPromoError("");
-    } else {
+      if (res.ok) {
+        const calculatedDiscount = (subtotal * data.discount) / 100;
+        setDiscount(calculatedDiscount);
+        setPromoError("");
+      } else {
+        setDiscount(0);
+        setPromoError(data.message || t.promo_invalid);
+      }
+    } catch (err) {
+      console.error(err);
       setDiscount(0);
-      setPromoError(data.message || "Promo kodi noto‘g‘ri");
+      setPromoError(t.server_error);
     }
-  } catch (err) {
-    console.error(err);
-    setDiscount(0);
-    setPromoError("Server bilan bog‘lanishda xatolik yuz berdi");
-  }
-};
+  };
 
+  // -------------------- PURCHASE --------------------
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!latLng) return alert("Iltimos, xaritada manzilingizni tanlang!");
-    if (cart.length === 0) return alert("Savatcha bo‘sh!");
+    if (!latLng) return alert(t.select_address);
+    if (cart.length === 0) return alert(t.empty_cart);
 
     setLoading(true);
 
@@ -79,7 +84,7 @@ export default function CheckoutPage() {
         name: fullName,
         phone,
         address,
-        location: { latitude: latLng.lat, longitude: latLng.lng }, // <-- Qo‘shildi
+        location: { latitude: latLng.lat, longitude: latLng.lng },
       },
       items: cart.map((item) => ({
         id: item.id,
@@ -113,28 +118,29 @@ export default function CheckoutPage() {
       setLoading(false);
       router.push("/profile");
     } catch (err: any) {
-      alert("Xato yuz berdi: " + err.message);
+      alert(t.error_occurred + ": " + err.message);
       setLoading(false);
     }
   };
 
-  // Telefon formatlash funksiyasi
+  // -------------------- PHONE FORMAT --------------------
   const formatPhone = (value: string) => {
     let digits = value.replace(/\D/g, "");
     if (digits.startsWith("998")) digits = digits.slice(3);
     return "+(998)" + digits.slice(0, 9);
   };
 
+  // -------------------- RENDER --------------------
   return (
     <main className="min-h-screen bg-white p-6 md:p-16 text-gray-900">
       <h1 className="text-4xl font-extrabold mb-12 text-center text-pink-500">
-        Checkout
+        {t.checkout}
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* Cart */}
+        {/* CART */}
         <div>
-          <h2 className="text-2xl font-semibold mb-6">Savatcha</h2>
+          <h2 className="text-2xl font-semibold mb-6">{t.cart}</h2>
           <div className="space-y-4">
             {cart.map((item: CartItem) => (
               <motion.div
@@ -157,11 +163,9 @@ export default function CheckoutPage() {
                         onChange={(e) => updateColor(item.id, e.target.value)}
                         className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
                       >
-                        <option value="">Rangni tanlang</option>
+                        <option value="">{t.select_color}</option>
                         {item.availableColors.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
+                          <option key={c} value={c}>{c}</option>
                         ))}
                       </select>
                     )}
@@ -171,11 +175,9 @@ export default function CheckoutPage() {
                         onChange={(e) => updateSize(item.id, e.target.value)}
                         className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
                       >
-                        <option value="">O‘lchamni tanlang</option>
+                        <option value="">{t.select_size}</option>
                         {item.availableSizes.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
+                          <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
                     )}
@@ -198,7 +200,7 @@ export default function CheckoutPage() {
                     onClick={() => removeFromCart(item.id)}
                     className="text-red-500 text-sm hover:underline"
                   >
-                    O‘chirish
+                    {t.remove}
                   </button>
                 </div>
               </motion.div>
@@ -208,17 +210,17 @@ export default function CheckoutPage() {
           {/* TOTAL */}
           <div className="mt-6 bg-gray-100 p-5 rounded-2xl shadow space-y-2">
             <div className="flex justify-between text-gray-700">
-              <span>Jami</span>
+              <span>{t.total}</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Chegirma</span>
+                <span>{t.discount}</span>
                 <span>- ${discount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-xl text-gray-900">
-              <span>Umumiy</span>
+              <span>{t.grand_total}</span>
               <span className="text-pink-500">${total.toFixed(2)}</span>
             </div>
           </div>
@@ -229,9 +231,9 @@ export default function CheckoutPage() {
           onSubmit={handlePurchase}
           className="bg-gray-100 p-8 rounded-2xl shadow space-y-4"
         >
-          <h2 className="text-2xl font-semibold text-pink-500">Yetkazib berish</h2>
+          <h2 className="text-2xl font-semibold text-pink-500">{t.delivery}</h2>
           <input
-            placeholder="To‘liq ism"
+            placeholder={t.full_name}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
@@ -239,7 +241,7 @@ export default function CheckoutPage() {
           />
           <input
             type="tel"
-            placeholder="+998 90 123 45 67"
+            placeholder={t.phone_placeholder}
             value={phone}
             onChange={(e) => setPhone(formatPhone(e.target.value))}
             required
@@ -262,7 +264,7 @@ export default function CheckoutPage() {
                 onClick={() => setEditingAddress(!editingAddress)}
                 className="px-3 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition"
               >
-                {editingAddress ? "Saqlash" : "Tahrirlash"}
+                {editingAddress ? t.save : t.edit}
               </button>
             </div>
           )}
@@ -272,7 +274,7 @@ export default function CheckoutPage() {
             <input
               value={promo}
               onChange={(e) => setPromo(e.target.value)}
-              placeholder="Promo kodi"
+              placeholder={t.promo_placeholder}
               className="flex-1 px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
             />
             <button
@@ -280,7 +282,7 @@ export default function CheckoutPage() {
               onClick={applyPromo}
               className="px-5 rounded-2xl bg-pink-500 font-semibold hover:bg-pink-600 transition"
             >
-              Qo‘llash
+              {t.apply_promo}
             </button>
           </div>
           {promoError && <p className="text-red-500 mt-1">{promoError}</p>}
@@ -291,7 +293,7 @@ export default function CheckoutPage() {
             disabled={loading}
             className="w-full mt-4 bg-pink-500 text-white py-3 rounded-2xl font-bold hover:bg-pink-600 transition"
           >
-            {loading ? "Jarayonda..." : "Sotib olish"}
+            {loading ? t.processing : t.purchase}
           </motion.button>
         </form>
       </div>
