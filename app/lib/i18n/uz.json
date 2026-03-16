@@ -13,11 +13,8 @@
   "soft_title": "Yumshoq. Xavfsiz. Stil.",
   "soft_desc": "Yumshoq teriga mos premium matolar.",
   "favorites_title": "Har kuni sevimlilar",
-  "cat_pants": "Shimlar",
-  "cat_shoes": "Oyoq kiyim",
-  "cat_jackets": "Kurtkalar",
-  "cat_accessories": "Aksessuarlar",
-  "prod_pants": "Qulay shimlar",
+
+  "prod_pants": "Qulay shimlaar",
   "prod_shoes": "Yengil krossovkalar",
   "prod_jacket": "Issiq kurtkalar",
   "prod_dress": "Yozgi libos",
@@ -87,5 +84,4 @@
   "quantity": "Soni",
 
   "error": "Xatolik"
-  
 }

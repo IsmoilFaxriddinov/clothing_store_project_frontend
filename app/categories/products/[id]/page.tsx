@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { AiFillHeart } from "react-icons/ai";
 import { useCart } from "@/app/context/CartContext";
 import { useFavorite } from "@/app/context/FavoriteContext";
@@ -13,13 +13,26 @@ type Product = {
   id: number;
   title: string;
   description: string;
-  price: number;
-  discount_price?: number;
+  price: number; // original price
+  discount_price?: number; // product discount %
+  category_discount?: number; // category discount %
   images: string[];
   color: string[];
   sizes: string[];
   ages?: string[];
 };
+
+// ================== FINAL PRICE FUNCTION ==================
+function calculateFinalPrice(
+  price: number,
+  productDiscount?: number,
+  categoryDiscount?: number
+) {
+  // Product discount ustun bo'lsa uni ishlatadi, aks holda category discount ishlaydi
+  const discount = productDiscount && productDiscount > 0 ? productDiscount : categoryDiscount || 0;
+  const discounted = price * (1 - discount / 100);
+  return discounted.toFixed(2);
+}
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -37,6 +50,12 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [adding, setAdding] = useState(false);
   const [liked, setLiked] = useState(false);
+
+  const [toast, setToast] = useState<string | null>(null);
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -56,25 +75,34 @@ export default function ProductDetailPage() {
 
         const attr = data.attributes || data;
 
+        // Images
         const images: string[] = [];
-        ["image_1","image_2","image_3","image_4","image_5"].forEach((key) => {
-          if (attr[key]?.length) {
-            attr[key].forEach((img: any) => {
-              if (img?.url) images.push(`http://localhost:1337${img.url}`);
-            });
+        ["image_1", "image_2", "image_3", "image_4", "image_5"].forEach(
+          (key) => {
+            if (attr[key]?.length) {
+              attr[key].forEach((img: any) => {
+                if (img?.url) images.push(`http://localhost:1337${img.url}`);
+              });
+            }
           }
-        });
+        );
 
         const color: string[] = Array.from(new Set(attr.color || []));
         const sizes: string[] = Array.from(new Set(attr.sizes || []));
         const ages: string[] = Array.from(new Set(attr.ages || []));
+
+        // ================= CATEGORY DISCOUNT =================
+        // TO'G'RI RELATION PATH
+        const categoryDiscount =
+          attr.category?.discount_category || 0;
 
         const formattedProduct: Product = {
           id: data.id,
           title: attr.title,
           description: attr.description,
           price: attr.price,
-          discount_price: attr.discount_price,
+          discount_price: attr.discount_price, // product % discount
+          category_discount: categoryDiscount, // category % discount
           images: images.length ? images : ["/placeholder.png"],
           color: color.length ? color : ["N/A"],
           sizes: sizes.length ? sizes : ["N/A"],
@@ -94,28 +122,40 @@ export default function ProductDetailPage() {
   }, [id, favorites]);
 
   const handleAddToCart = () => {
-    if (!selectedColor || !selectedSize || !selectedAge) {
-      alert(t.select_color_size_age);
+    if (!selectedColor) {
+      showToast(t.select_color);
+      return;
+    }
+
+    if (!selectedSize && !selectedAge) {
+      showToast(t.select_size_or_age);
       return;
     }
 
     if (!product) return;
 
+    const finalPrice = parseFloat(
+      calculateFinalPrice(
+        product.price,
+        product.discount_price,
+        product.category_discount
+      )
+    );
+
     addToCart({
       id: product.id,
       title: product.title,
-      price: product.discount_price ?? product.price,
+      price: finalPrice,
       color: selectedColor,
-      size: selectedSize,
-      age: selectedAge,
+      size: selectedSize || "N/A",
+      age: selectedAge || "N/A",
       quantity: 1,
       image: product.images[0],
     });
 
     setAdding(true);
-    setTimeout(() => {
-      setAdding(false);
-    }, 1000);
+    showToast(t.added_to_cart);
+    setTimeout(() => setAdding(false), 1000);
   };
 
   const handleToggleFavorite = () => {
@@ -124,19 +164,34 @@ export default function ProductDetailPage() {
     setLiked((prev) => !prev);
   };
 
-  if (loading) return <div className="text-center mt-20">{t.loading_products}</div>;
-  if (!product) return <div className="text-center mt-20">{t.product_not_found}</div>;
+  if (loading)
+    return <div className="text-center mt-20">{t.loading_products}</div>;
+  if (!product)
+    return <div className="text-center mt-20">{t.product_not_found}</div>;
+
+  const finalPrice = calculateFinalPrice(
+    product.price,
+    product.discount_price,
+    product.category_discount
+  );
+
+  const totalDiscount =
+    (product.discount_price || 0) + (product.category_discount || 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-purple-50 to-blue-50 p-6 md:p-16">
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-start">
-
         {/* IMAGE */}
         <div className="bg-white rounded-3xl shadow-xl p-6 relative">
-          {product.discount_price && (
-            <span className="absolute top-4 left-4 bg-pink-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-              SALE
-            </span>
+          {totalDiscount > 0 && (
+            <>
+              <span className="absolute top-4 left-4 bg-pink-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                SALE
+              </span>
+              <span className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                -{totalDiscount}%
+              </span>
+            </>
           )}
 
           <motion.img
@@ -160,7 +215,7 @@ export default function ProductDetailPage() {
                   : "border-gray-200 opacity-70 hover:opacity-100"
                 }`}
               >
-                <img src={img} className="w-full h-full object-contain"/>
+                <img src={img} className="w-full h-full object-contain" />
               </button>
             ))}
           </div>
@@ -174,12 +229,12 @@ export default function ProductDetailPage() {
 
           <div className="flex gap-3 mb-4 items-center">
             <span className="text-2xl font-extrabold text-pink-700">
-              ${product.discount_price ?? product.price}
+              ${finalPrice}
             </span>
 
-            {product.discount_price && (
+            {totalDiscount > 0 && (
               <span className="line-through text-gray-400">
-                ${product.price}
+                ${product.price.toFixed(2)}
               </span>
             )}
 
@@ -188,7 +243,9 @@ export default function ProductDetailPage() {
               whileTap={{ scale: 0.8 }}
               className="ml-4 text-3xl"
             >
-              <AiFillHeart className={liked ? "text-red-500" : "text-gray-300"} />
+              <AiFillHeart
+                className={liked ? "text-red-500" : "text-gray-300"}
+              />
             </motion.button>
           </div>
 
@@ -202,7 +259,9 @@ export default function ProductDetailPage() {
                 <button
                   key={c}
                   onClick={() => setSelectedColor(c)}
-                  style={{ backgroundColor: c !== "N/A" ? c.toLowerCase() : "gray" }}
+                  style={{
+                    backgroundColor: c !== "N/A" ? c.toLowerCase() : "gray",
+                  }}
                   className={`w-10 h-10 rounded-full border-2 ${
                     selectedColor === c ? "ring-2 ring-pink-600" : "opacity-70"
                   }`}
@@ -213,56 +272,82 @@ export default function ProductDetailPage() {
           </div>
 
           {/* SIZES */}
-          <div className="mb-6">
-            <h3 className="font-semibold mb-2 text-gray-900">{t.size}</h3>
-            <div className="flex gap-3 flex-wrap">
-              {product.sizes.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSelectedSize(s)}
-                  className={`px-5 py-2 rounded-lg border-2 font-semibold transition
-                  ${selectedSize === s
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-black border-black hover:bg-black hover:text-white"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+          {product.sizes.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2 text-gray-900">{t.size}</h3>
+              <div className="flex gap-3 flex-wrap">
+                {product.sizes.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSelectedSize(s)}
+                    className={`px-5 py-2 rounded-lg border-2 font-semibold transition
+                    ${
+                      selectedSize === s
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-black border-black hover:bg-black hover:text-white"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* AGES */}
-          <div className="mb-6">
-            <h3 className="font-semibold mb-2 text-gray-900">{t.age}</h3>
-            <div className="flex gap-3 flex-wrap">
-              {product.ages?.map((a) => (
-                <button
-                  key={a}
-                  onClick={() => setSelectedAge(a)}
-                  className={`px-4 py-2 rounded-lg border-2 font-semibold transition
-                  ${selectedAge === a
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-black border-black hover:bg-black hover:text-white"
-                  }`}
-                >
-                  {a}
-                </button>
-              ))}
+          {product.ages?.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2 text-gray-900">{t.age}</h3>
+              <div className="flex gap-3 flex-wrap">
+                {product.ages.map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setSelectedAge(a)}
+                    className={`px-4 py-2 rounded-lg border-2 font-semibold transition
+                    ${
+                      selectedAge === a
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-black border-black hover:bg-black hover:text-white"
+                    }`}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <motion.button
             onClick={handleAddToCart}
             disabled={adding}
             whileTap={{ scale: 0.95 }}
             className={`w-full md:w-auto px-8 py-3 rounded-xl font-semibold transition
-            ${adding ? "bg-black text-white" : "bg-pink-600 text-white hover:bg-pink-700"}`}
+            ${
+              adding
+                ? "bg-black text-white"
+                : "bg-pink-600 text-white hover:bg-pink-700"
+            }`}
           >
             {adding ? `✅ ${t.added_to_cart}` : `${t.add_to_cart} 🛒`}
           </motion.button>
         </div>
       </div>
+
+      {/* ========================== TOAST ========================== */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-5 right-5 bg-yellow-400 text-black px-4 py-2 rounded-lg shadow-lg font-semibold z-50"
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

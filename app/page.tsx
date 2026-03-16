@@ -6,6 +6,16 @@ import { motion } from "framer-motion";
 import { useLang } from "../app/context/LangContext"; // ✅ global lang
 import { getDictionary } from "../app/lib/i18n"; // dictionary
 
+type Product = {
+  id: number;
+  title: string;
+  slug: string;
+  image: string;
+  category: string;
+  categorySlug: string;
+  price?: number;
+};
+
 export default function Home() {
   const router = useRouter();
   const { lang } = useLang(); // ✅ global lang
@@ -24,21 +34,59 @@ export default function Home() {
     { title: t.cat_accessories, src: "/category-accessories.png", slug: "accessories" },
   ];
 
-  const products = [
-    { src: "/product-pants.png", title: t.prod_pants },
-    { src: "/product-shoes.png", title: t.prod_shoes },
-    { src: "/product-jacket.png", title: t.prod_jacket },
-    { src: "/product-dress.png", title: t.prod_dress },
-  ];
-
+  const [products, setProducts] = useState<Product[]>([]); // ✅ state for backend products
   const [active, setActive] = useState(0);
 
+  // HERO slider
   useEffect(() => {
     const interval = setInterval(() => {
       setActive((prev) => (prev + 1) % heroSlides.length);
     }, 4000);
     return () => clearInterval(interval);
   }, [heroSlides.length]);
+
+  // FETCH products from backend
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await fetch(
+          "http://localhost:1337/api/products/all"
+        );
+        const data = await res.json();
+
+        const formatted: Product[] = data.slice(0, 4).map((p: any) => {
+          const categoryName =
+            lang === "en"
+              ? p.category?.name || t.unknown_category
+              : lang === "ru"
+              ? p.category?.name_ru || t.unknown_category
+              : p.category?.name_uz || t.unknown_category;
+
+          const categorySlug = (categoryName || "")
+            .toLowerCase()
+            .replace(/\s+/g, "-");
+
+          return {
+            id: p.id,
+            title: p.title,
+            slug: p.slug || p.title.toLowerCase().replace(/\s+/g, "-"),
+            price: p.price,
+            image: p.image_1?.[0]?.url
+              ? `http://localhost:1337${p.image_1[0].url}`
+              : "/placeholder.png",
+            category: categoryName,
+            categorySlug,
+          };
+        });
+
+        setProducts(formatted);
+      } catch (err) {
+        console.log("Product fetch error:", err);
+      }
+    }
+
+    fetchProducts();
+  }, [lang, t]);
 
   const fadeIn = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.8 } };
 
@@ -132,12 +180,31 @@ export default function Home() {
       <section className="px-6 md:px-20 py-28 bg-white">
         <h2 className="text-3xl md:text-4xl font-bold uppercase mb-14 text-center text-gray-900">{t.favorites_title}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12">
-          {products.map((item) => (
-            <motion.div key={item.title} whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }} className="group text-center bg-gray-50 p-6 rounded-2xl shadow-lg overflow-hidden">
-              <img src={item.src} alt={item.title} className="w-full h-80 object-contain transition-transform duration-300 group-hover:scale-110" />
-              <h3 className="mt-6 text-xl font-bold text-gray-900">{item.title}</h3>
-            </motion.div>
-          ))}
+          {products.length === 0 ? (
+            <p className="col-span-full text-center text-gray-500">
+              {t.loading_products}
+            </p>
+          ) : (
+            products.map((item) => (
+              <motion.div
+                key={item.id}
+                onClick={() =>
+                  router.push(`/products?category=${item.categorySlug}`)
+                }
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="group text-center bg-gray-50 p-6 rounded-2xl shadow-lg overflow-hidden cursor-pointer"
+              >
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-80 object-contain transition-transform duration-300 group-hover:scale-110"
+                />
+                <h3 className="mt-6 text-xl font-bold text-gray-900">{item.title}</h3>
+                {item.price && <p className="mt-2 text-gray-700 font-semibold">${item.price}</p>}
+              </motion.div>
+            ))
+          )}
         </div>
       </section>
     </main>
