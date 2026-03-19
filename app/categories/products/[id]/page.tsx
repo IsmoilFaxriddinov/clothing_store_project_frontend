@@ -87,7 +87,7 @@ export default function ProductDetailPage() {
           }
         );
 
-        const color: string[] = Array.from(new Set(attr.color || []));
+        const color: string[] = Array.from(new Set(attr.colors || []));
         const sizes: string[] = Array.from(new Set(attr.sizes || []));
         const ages: string[] = Array.from(new Set(attr.ages || []));
 
@@ -164,10 +164,8 @@ export default function ProductDetailPage() {
     setLiked((prev) => !prev);
   };
 
-  if (loading)
-    return <div className="text-center mt-20">{t.loading_products}</div>;
   if (!product)
-    return <div className="text-center mt-20">{t.product_not_found}</div>;
+    return;
 
   const finalPrice = calculateFinalPrice(
     product.price,

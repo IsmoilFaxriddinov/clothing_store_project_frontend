@@ -13,6 +13,20 @@
   "soft_title": "Yumshoq. Xavfsiz. Stil.",
   "soft_desc": "Yumshoq teriga mos premium matolar.",
   "favorites_title": "Har kuni sevimlilar",
+  "cat_pants": "Shimlar",
+  "cat_shoes": "Oyoq kiyim",
+  "cat_jackets": "Kurtkalar",
+  "cat_accessories": "Aksessuarlar",
+  "cat_dresses": "Ko‘ylaklar",
+  "cat_tshirts": "Futbolkalar",
+  "stats_title": "Do‘kon raqamlarda",
+  "stats_total_products": "Jami mahsulotlar",
+  "stats_in_stock": "Sotuvda bor",
+  "stats_colors": "Ranglar",
+  "stats_sizes": "O‘lchamlar",
+  "stats_ages": "Yoshlar",
+  "stats_unit_types": "xil",
+  "stats_unit_items": "ta",
 
   "prod_pants": "Qulay shimlaar",
   "prod_shoes": "Yengil krossovkalar",
@@ -57,7 +71,6 @@
   "server_error": "Server xatosi",
   "error_occurred": "Xatolik yuz berdi",
 
-  "product_not_found": "Mahsulot topilmadi",
   "select_color_size_age": "Iltimos rang, o‘lcham va yoshni tanlang!",
   "added_to_cart": "Savatchaga qo‘shildi",
 
