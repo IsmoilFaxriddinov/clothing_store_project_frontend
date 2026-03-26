@@ -3,41 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useAuth } from "../context/AuthContext";
 
-export default function RegisterPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
-  const { register } = useAuth(); // ✅ AuthContext register funksiyasi
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    if (!fullName || !email || !password || !phone) {
+    if (!name || !password) {
       setError("Please fill all fields");
       setLoading(false);
       return;
     }
 
-    try {
-      setTimeout(() => {
-        // ✅ AuthContext ga saqlash
-        register({ fullName, email, phone });
-
-        setLoading(false);
-        router.push("/products"); // ✅ Registerdan keyin products page
-      }, 800);
-    } catch (err) {
-      setError("Something went wrong!");
+    // ✅ ADMIN CHECK
+    setTimeout(() => {
+      if (name === "admin" && password === "admin") {
+        router.push("/admin/stats"); // ✅ redirect
+      } else {
+        setError("Invalid admin credentials");
+      }
       setLoading(false);
-    }
+    }, 500);
   };
 
   return (
@@ -48,57 +42,48 @@ export default function RegisterPage() {
         transition={{ duration: 0.6 }}
         className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md"
       >
-        <h1 className="text-4xl md:text-5xl font-extrabold text-pink-700 mb-8 text-center">
-          Register
+        <h1 className="text-4xl font-extrabold text-pink-700 mb-8 text-center">
+          Admin login
         </h1>
 
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {[
-            { label: "Full Name", type: "text", value: fullName, setValue: setFullName, placeholder: "Enter your full name" },
-            { label: "Email", type: "email", value: email, setValue: setEmail, placeholder: "Enter your email" },
-            { label: "Password", type: "password", value: password, setValue: setPassword, placeholder: "Enter your password" },
-            { label: "Phone Number", type: "tel", value: phone, setValue: setPhone, placeholder: "Enter your phone number" },
-          ].map((field) => (
-            <motion.div
-              key={field.label}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <label className="text-gray-900 font-bold mb-1">{field.label}</label>
-              <input
-                type={field.type}
-                placeholder={field.placeholder}
-                value={field.value}
-                onChange={(e) => field.setValue(e.target.value)}
-                required
-                className="w-full px-4 py-3 border rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-400 transition"
-              />
-            </motion.div>
-          ))}
+          
+          {/* NAME */}
+          <div>
+            <label className="text-gray-900 font-bold mb-1">Name</label>
+            <input
+              type="text"
+              placeholder="Enter admin name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-3 border rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            />
+          </div>
+
+          {/* PASSWORD */}
+          <div>
+            <label className="text-gray-900 font-bold mb-1">Password</label>
+            <input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-400"
+            />
+          </div>
 
           <motion.button
             type="submit"
             disabled={loading}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="mt-4 bg-pink-600 text-white py-3 rounded-2xl font-bold hover:bg-pink-700 transition transform"
+            className="mt-4 bg-pink-600 text-white py-3 rounded-2xl font-bold hover:bg-pink-700"
           >
-            {loading ? "Registering..." : "Register"}
+            {loading ? "Checking..." : "Login"}
           </motion.button>
         </form>
-
-        <p className="mt-4 text-gray-500 text-center">
-          Already have an account?{" "}
-          <span
-            className="text-pink-600 font-semibold cursor-pointer hover:underline"
-            onClick={() => router.push("/login")}
-          >
-            Login
-          </span>
-        </p>
       </motion.div>
     </div>
   );

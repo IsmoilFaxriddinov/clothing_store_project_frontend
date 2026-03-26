@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useLang } from "../app/context/LangContext"; // ✅ global lang
-import { getDictionary } from "../app/lib/i18n"; // dictionary
+import { useLang } from "./context/LangContext"; // ✅ global lang
+import { getDictionary } from "./lib/i18n"; // dictionary
 
 type Product = {
   id: number;
@@ -227,7 +227,7 @@ export default function Home() {
           </h1>
           <p className="mt-4 sm:mt-6 text-base sm:text-lg text-gray-600">{heroSlides[active].desc}</p>
           <button
-            onClick={() => router.push("/categories")}
+            onClick={() => router.push("/products")}
             className="mt-6 sm:mt-8 w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-indigo-500 to-pink-500 text-white rounded-full hover:scale-105 transform transition-all shadow-lg"
           >
             {t.shop_now}
@@ -277,7 +277,7 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-extrabold uppercase leading-tight text-gray-900">{t.built_title}</h2>
             <p className="mt-6 text-lg text-gray-700 max-w-md">{t.built_desc}</p>
             <button
-              onClick={() => router.push("/categories")}
+              onClick={() => router.push("/products")}
               className="mt-8 px-8 py-3 bg-indigo-500 text-white rounded-full hover:scale-105 transform transition-all shadow-lg"
             >
               {t.explore_collection}

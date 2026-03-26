@@ -272,9 +272,9 @@ export default function ProfilePage() {
                   order.products.map((product, idx) => (
                     <motion.div
                       key={idx}
-                      className="w-60 bg-gray-50 rounded-3xl border p-5 shadow-md"
+                      className="w-60 bg-gray-50 text-black rounded-3xl border p-5 shadow-md"
                     >
-                      <p className="font-bold text-xl mb-2 truncate">
+                      <p className="font-bold text-xl mb-2 truncate"> 
                         {getProductTitle(product)}
                       </p>
 

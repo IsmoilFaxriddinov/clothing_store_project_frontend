@@ -25,33 +25,53 @@ type Stats = {
   averageOrderValue: number;
 
   topProducts: [string, number][];
+
+  // ✅ YANGI: backenddan keladi
+  chart: {
+    name: string;
+    revenue: number;
+  }[];
 };
 
 export default function AdminStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [period, setPeriod] = useState("daily");
 
   useEffect(() => {
-    fetch("http://localhost:1337/api/orders/stats")
+    fetch(`http://localhost:1337/api/orders/stats?period=${period}`)
       .then((res) => res.json())
-      .then((data) => setStats(data));
-  }, []);
+      .then((data) => setStats(data))
+      .catch((err) => console.error(err));
+  }, [period]);
 
   if (!stats) return <p className="p-10">Loading...</p>;
 
-  // fake chart data (keyin real qilamiz)
-  const chartData = [
-    { name: "Mon", revenue: 200 },
-    { name: "Tue", revenue: 400 },
-    { name: "Wed", revenue: 300 },
-    { name: "Thu", revenue: 800 },
-    { name: "Fri", revenue: 600 },
-  ];
+  // ✅ BACKEND CHART
+  const chartData = stats.chart || [];
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 text-white p-6 md:p-12">
-      <h1 className="text-4xl font-bold mb-10 text-center">
+      
+      <h1 className="text-4xl font-bold mb-6 text-center">
         🚀 Admin Analytics
       </h1>
+
+      {/* ===== PERIOD SWITCH ===== */}
+      <div className="flex justify-center gap-3 mb-10">
+        {["daily", "weekly", "monthly", "yearly"].map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`px-4 py-2 rounded-xl text-sm capitalize transition ${
+              period === p
+                ? "bg-blue-500 text-white"
+                : "bg-white/10 text-gray-300 hover:bg-white/20"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
 
       {/* ===== TOP CARDS ===== */}
       <div className="grid md:grid-cols-4 gap-6 mb-10">
@@ -73,7 +93,7 @@ export default function AdminStatsPage() {
               <Line
                 type="monotone"
                 dataKey="revenue"
-                stroke="#ff4d6d"
+                stroke="#38bdf8"
                 strokeWidth={3}
               />
             </LineChart>
@@ -92,7 +112,7 @@ export default function AdminStatsPage() {
       <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-xl">
         <h2 className="mb-4 text-lg font-semibold">🏆 Top Products</h2>
 
-        {stats.topProducts.map(([name, qty], i) => (
+        {stats.topProducts?.map(([name, qty]) => (
           <div key={name} className="mb-3">
             <div className="flex justify-between text-sm mb-1">
               <span>{name}</span>
@@ -102,7 +122,7 @@ export default function AdminStatsPage() {
             <div className="w-full bg-gray-700 rounded-full h-2">
               <div
                 className="bg-pink-500 h-2 rounded-full"
-                style={{ width: `${qty * 5}%` }}
+                style={{ width: `${(qty / 100) * 100}%` }} // xavfsiz
               />
             </div>
           </div>
@@ -147,6 +167,8 @@ function ProgressCard({
   value: number;
   color: string;
 }) {
+  const max = 100;
+
   return (
     <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl">
       <h3 className="mb-2">{title}</h3>
@@ -154,7 +176,7 @@ function ProgressCard({
       <div className="w-full bg-gray-700 h-3 rounded-full">
         <div
           className={`${color} h-3 rounded-full`}
-          style={{ width: `${value * 10}%` }}
+          style={{ width: `${(value / max) * 100}%` }}
         />
       </div>
 

@@ -2,14 +2,14 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CartProvider } from "../app/context/CartContext";
-import { AuthProvider } from "../app/context/AuthContext";
-import { FavoriteProvider } from "../app/context/FavoriteContext";
-import { CheckoutProvider } from "../app/context/CheckoutContext";
-import { LangProvider } from "../app/context/LangContext"; // ✅ import qildik
+import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
+import { FavoriteProvider } from "./context/FavoriteContext";
+import { CheckoutProvider } from "./context/CheckoutContext";
+import { LangProvider } from "./context/LangContext"; // ✅ import qildik
 
 export const metadata = {
-  title: "KidsShop",
+  title: "Musaffo kids",
   description: "Kids clothing store",
 };
 
