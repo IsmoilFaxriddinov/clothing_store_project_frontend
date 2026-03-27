@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useCart } from "../context/CartContext";
-import CheckoutMap from "@/components/CheckoutMap";
+const CheckoutMap = dynamic(() => import("@/components/CheckoutMap"), { ssr: false });
 import { useLang } from "../context/LangContext"; // global lang
 import { getDictionary } from "../lib/i18n"; // dictionary
 
