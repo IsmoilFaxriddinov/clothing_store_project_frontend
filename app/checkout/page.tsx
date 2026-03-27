@@ -132,171 +132,171 @@ export default function CheckoutPage() {
 
   // -------------------- RENDER --------------------
   return (
-    <main className="min-h-screen bg-white p-6 md:p-16 text-gray-900">
-      <h1 className="text-4xl font-extrabold mb-12 text-center text-pink-500">
-        {t.checkout}
-      </h1>
+  <main className="min-h-screen bg-white p-6 md:p-16 text-gray-900">
+    <h1 className="text-4xl font-extrabold mb-12 text-center text-pink-500">
+      {t.checkout}
+    </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* CART */}
-        <div>
-          <h2 className="text-2xl font-semibold mb-6">{t.cart}</h2>
-          <div className="space-y-4">
-            {cart.map((item: CartItem) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-4 bg-gray-100 p-4 rounded-2xl shadow"
-              >
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-24 h-24 object-contain rounded-lg"
-                />
-                <div className="flex-1 space-y-1">
-                  <h3 className="font-semibold">{item.title}</h3>
-                  <div className="flex gap-2 items-center">
-                    {item.availableColors?.length > 0 && (
-                      <select
-                        value={item.color || ""}
-                        onChange={(e) => updateColor(item.id, e.target.value)}
-                        className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
-                      >
-                        <option value="">{t.select_color}</option>
-                        {item.availableColors.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    )}
-                    {item.availableSizes?.length > 0 && (
-                      <select
-                        value={item.size || ""}
-                        onChange={(e) => updateSize(item.id, e.target.value)}
-                        className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
-                      >
-                        <option value="">{t.select_size}</option>
-                        {item.availableSizes.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                  <p className="font-bold">${item.price.toFixed(2)}</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      {/* CART */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-6">{t.cart}</h2>
+        <div className="space-y-4">
+          {cart.map((item: CartItem) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-4 bg-gray-100 p-4 rounded-2xl shadow"
+            >
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-24 h-24 object-contain rounded-lg"
+              />
+              <div className="flex-1 space-y-1">
+                <h3 className="font-semibold">{item.title}</h3>
+                <div className="flex gap-2 items-center">
+                  {(item.availableColors || []).length > 0 && (
+                    <select
+                      value={item.color || ""}
+                      onChange={(e) => updateColor(item.id, e.target.value)}
+                      className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
+                    >
+                      <option value="">{t.select_color}</option>
+                      {(item.availableColors || []).map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  )}
+                  {(item.availableSizes || []).length > 0 && (
+                    <select
+                      value={item.size || ""}
+                      onChange={(e) => updateSize(item.id, e.target.value)}
+                      className="bg-gray-200 rounded-xl px-2 py-1 text-sm"
+                    >
+                      <option value="">{t.select_size}</option>
+                      {(item.availableSizes || []).map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateQuantity(item.id, Math.min(Number(e.target.value), 20))
-                    }
-                    className="w-16 text-center rounded-xl bg-gray-200 border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeFromCart(item.id)}
-                    className="text-red-500 text-sm hover:underline"
-                  >
-                    {t.remove}
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* TOTAL */}
-          <div className="mt-6 bg-gray-100 p-5 rounded-2xl shadow space-y-2">
-            <div className="flex justify-between text-gray-700">
-              <span>{t.total}</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-            {discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>{t.discount}</span>
-                <span>- ${discount.toFixed(2)}</span>
+                <p className="font-bold">${item.price.toFixed(2)}</p>
               </div>
-            )}
-            <div className="flex justify-between font-bold text-xl text-gray-900">
-              <span>{t.grand_total}</span>
-              <span className="text-pink-500">${total.toFixed(2)}</span>
-            </div>
-          </div>
+              <div className="flex flex-col items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={item.quantity}
+                  onChange={(e) =>
+                    updateQuantity(item.id, Math.min(Number(e.target.value), 20))
+                  }
+                  className="w-16 text-center rounded-xl bg-gray-200 border"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeFromCart(item.id)}
+                  className="text-red-500 text-sm hover:underline"
+                >
+                  {t.remove}
+                </button>
+              </div>
+            </motion.div>
+          ))}
         </div>
 
-        {/* FORM */}
-        <form
-          onSubmit={handlePurchase}
-          className="bg-gray-100 p-8 rounded-2xl shadow space-y-4"
-        >
-          <h2 className="text-2xl font-semibold text-pink-500">{t.delivery}</h2>
-          <input
-            placeholder={t.full_name}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
-          />
-          <input
-            type="tel"
-            placeholder={t.phone_placeholder}
-            value={phone}
-            onChange={(e) => setPhone(formatPhone(e.target.value))}
-            required
-            className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
-          />
-          <CheckoutMap latLng={latLng} setLatLng={setLatLng} setAddress={setAddress} />
-          {address && (
-            <div className="flex items-center gap-2 mt-2">
-              {editingAddress ? (
-                <input
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-xl"
-                />
-              ) : (
-                <p className="flex-1 text-gray-700">{address}</p>
-              )}
-              <button
-                type="button"
-                onClick={() => setEditingAddress(!editingAddress)}
-                className="px-3 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition"
-              >
-                {editingAddress ? t.save : t.edit}
-              </button>
+        {/* TOTAL */}
+        <div className="mt-6 bg-gray-100 p-5 rounded-2xl shadow space-y-2">
+          <div className="flex justify-between text-gray-700">
+            <span>{t.total}</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>{t.discount}</span>
+              <span>- ${discount.toFixed(2)}</span>
             </div>
           )}
+          <div className="flex justify-between font-bold text-xl text-gray-900">
+            <span>{t.grand_total}</span>
+            <span className="text-pink-500">${total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
 
-          {/* PROMO */}
-          <div className="pt-4 flex gap-2">
-            <input
-              value={promo}
-              onChange={(e) => setPromo(e.target.value)}
-              placeholder={t.promo_placeholder}
-              className="flex-1 px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
-            />
+      {/* FORM */}
+      <form
+        onSubmit={handlePurchase}
+        className="bg-gray-100 p-8 rounded-2xl shadow space-y-4"
+      >
+        <h2 className="text-2xl font-semibold text-pink-500">{t.delivery}</h2>
+        <input
+          placeholder={t.full_name}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+          className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
+        />
+        <input
+          type="tel"
+          placeholder={t.phone_placeholder}
+          value={phone}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
+          required
+          className="w-full px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
+        />
+        <CheckoutMap latLng={latLng} setLatLng={setLatLng} setAddress={setAddress} />
+        {address && (
+          <div className="flex items-center gap-2 mt-2">
+            {editingAddress ? (
+              <input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="flex-1 px-3 py-2 border rounded-xl"
+              />
+            ) : (
+              <p className="flex-1 text-gray-700">{address}</p>
+            )}
             <button
               type="button"
-              onClick={applyPromo}
-              className="px-5 rounded-2xl bg-pink-500 font-semibold hover:bg-pink-600 transition"
+              onClick={() => setEditingAddress(!editingAddress)}
+              className="px-3 py-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition"
             >
-              {t.apply_promo}
+              {editingAddress ? t.save : t.edit}
             </button>
           </div>
-          {promoError && <p className="text-red-500 mt-1">{promoError}</p>}
+        )}
 
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            disabled={loading}
-            className="w-full mt-4 bg-pink-500 text-white py-3 rounded-2xl font-bold hover:bg-pink-600 transition"
+        {/* PROMO */}
+        <div className="pt-4 flex gap-2">
+          <input
+            value={promo}
+            onChange={(e) => setPromo(e.target.value)}
+            placeholder={t.promo_placeholder}
+            className="flex-1 px-4 py-3 rounded-2xl bg-white border focus:ring-2 focus:ring-pink-500 outline-none"
+          />
+          <button
+            type="button"
+            onClick={applyPromo}
+            className="px-5 rounded-2xl bg-pink-500 font-semibold hover:bg-pink-600 transition"
           >
-            {loading ? t.processing : t.purchase}
-          </motion.button>
-        </form>
-      </div>
-    </main>
-  );
+            {t.apply_promo}
+          </button>
+        </div>
+        {promoError && <p className="text-red-500 mt-1">{promoError}</p>}
+
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          disabled={loading}
+          className="w-full mt-4 bg-pink-500 text-white py-3 rounded-2xl font-bold hover:bg-pink-600 transition"
+        >
+          {loading ? t.processing : t.purchase}
+        </motion.button>
+      </form>
+    </div>
+  </main>
+);
 }

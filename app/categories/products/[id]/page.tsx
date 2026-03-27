@@ -8,6 +8,7 @@ import { useCart } from "@/app/context/CartContext";
 import { useFavorite } from "@/app/context/FavoriteContext";
 import { useLang } from "@/app/context/LangContext";
 import { getDictionary } from "@/app/lib/i18n";
+import { Product as FavoriteProduct } from "@/app/context/FavoriteContext"; // FavoriteContext Product
 
 type Product = {
   id: number;
@@ -20,6 +21,8 @@ type Product = {
   color: string[];
   sizes: string[];
   ages?: string[];
+  slug: string;
+  category: string;
 };
 
 // ================== FINAL PRICE FUNCTION ==================
@@ -28,7 +31,6 @@ function calculateFinalPrice(
   productDiscount?: number,
   categoryDiscount?: number
 ) {
-  // Product discount ustun bo'lsa uni ishlatadi, aks holda category discount ishlaydi
   const discount = productDiscount && productDiscount > 0 ? productDiscount : categoryDiscount || 0;
   const discounted = price * (1 - discount / 100);
   return discounted.toFixed(2);
@@ -75,7 +77,6 @@ export default function ProductDetailPage() {
 
         const attr = data.attributes || data;
 
-        // Images
         const images: string[] = [];
         ["image_1", "image_2", "image_3", "image_4", "image_5"].forEach(
           (key) => {
@@ -91,22 +92,19 @@ export default function ProductDetailPage() {
         const sizes: string[] = Array.from(new Set(attr.sizes || []));
         const ages: string[] = Array.from(new Set(attr.ages || []));
 
-        // ================= CATEGORY DISCOUNT =================
-        // TO'G'RI RELATION PATH
-        const categoryDiscount =
-          attr.category?.discount_category || 0;
-
         const formattedProduct: Product = {
           id: data.id,
           title: attr.title,
           description: attr.description,
           price: attr.price,
-          discount_price: attr.discount_price, // product % discount
-          category_discount: categoryDiscount, // category % discount
+          discount_price: attr.discount_price,
+          category_discount: attr.category?.discount_category || 0,
           images: images.length ? images : ["/placeholder.png"],
           color: color.length ? color : ["N/A"],
           sizes: sizes.length ? sizes : ["N/A"],
           ages: ages.length ? ages : ["N/A"],
+          slug: attr.slug || attr.title.toLowerCase().replace(/\s+/g, "-"),
+          category: attr.category?.name || "unknown",
         };
 
         setProduct(formattedProduct);
@@ -127,11 +125,6 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if (!selectedSize && !selectedAge) {
-      showToast(t.select_size_or_age);
-      return;
-    }
-
     if (!product) return;
 
     const finalPrice = parseFloat(
@@ -143,12 +136,10 @@ export default function ProductDetailPage() {
     );
 
     addToCart({
-      id: product.id,
       title: product.title,
       price: finalPrice,
       color: selectedColor,
       size: selectedSize || "N/A",
-      age: selectedAge || "N/A",
       quantity: 1,
       image: product.images[0],
     });
@@ -160,12 +151,17 @@ export default function ProductDetailPage() {
 
   const handleToggleFavorite = () => {
     if (!product) return;
-    toggleFavorite(product);
+
+    // TypeScript uchun FavoriteContext Product tipiga moslab olamiz
+    const favoriteProduct: FavoriteProduct = {
+      ...product
+    };
+
+    toggleFavorite(favoriteProduct);
     setLiked((prev) => !prev);
   };
 
-  if (!product)
-    return;
+  if (!product) return null;
 
   const finalPrice = calculateFinalPrice(
     product.price,
@@ -173,8 +169,7 @@ export default function ProductDetailPage() {
     product.category_discount
   );
 
-  const totalDiscount =
-    (product.discount_price || 0) + (product.category_discount || 0);
+  const totalDiscount = (product.discount_price || 0) + (product.category_discount || 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-purple-50 to-blue-50 p-6 md:p-16">
@@ -293,27 +288,27 @@ export default function ProductDetailPage() {
           )}
 
           {/* AGES */}
-          {product.ages?.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-2 text-gray-900">{t.age}</h3>
-              <div className="flex gap-3 flex-wrap">
-                {product.ages.map((a) => (
-                  <button
-                    key={a}
-                    onClick={() => setSelectedAge(a)}
-                    className={`px-4 py-2 rounded-lg border-2 font-semibold transition
+          {product.ages && product.ages.length > 0 && (
+          <div className="mb-6">
+            <h3 className="font-semibold mb-2 text-gray-900">{t.age}</h3>
+            <div className="flex gap-3 flex-wrap">
+              {product.ages.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setSelectedAge(a)}
+                  className={`px-4 py-2 rounded-lg border-2 font-semibold transition
                     ${
                       selectedAge === a
                         ? "bg-black text-white border-black"
                         : "bg-white text-black border-black hover:bg-black hover:text-white"
                     }`}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
+                >
+                  {a}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
           <motion.button
             onClick={handleAddToCart}

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
-import { getDictionary } from "../app/lib/i18n";
+import { getDictionary, Lang } from "../app/lib/i18n";
 import { useLang } from "../app/context/LangContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
@@ -16,7 +16,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const changeLang = (newLang: string) => {
+  // ====================== Type-safe ======================
+  const changeLang = (newLang: Lang) => {
     setLang(newLang);
     router.push(`${pathname}?lang=${newLang}`);
     setOpen(false);
@@ -47,7 +48,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2 md:hidden">
           <select
             value={lang}
-            onChange={(e) => changeLang(e.target.value)}
+            onChange={(e) => changeLang(e.target.value as Lang)}
             className="h-10 px-2 rounded-xl bg-white/10 border border-white/10 text-gray-700 text-sm"
           >
             <option value="uz">UZ</option>
@@ -111,7 +112,7 @@ export default function Navbar() {
           {/* LANG */}
           <select
             value={lang}
-            onChange={(e) => changeLang(e.target.value)}
+            onChange={(e) => changeLang(e.target.value as Lang)}
             className="bg-white/10 px-3 py-2 rounded-xl hover:bg-white/20 transition"
           >
             <option value="uz" className="text-black">UZ</option>

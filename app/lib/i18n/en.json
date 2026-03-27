@@ -96,5 +96,7 @@
   "time_saved": "Time saved successfully!",
   "order_fetch_error": "Error fetching order",
 
+  "only_discounted": "Only Discounted",
+  "show_all": "Show All",
   "error": "Error"
 }

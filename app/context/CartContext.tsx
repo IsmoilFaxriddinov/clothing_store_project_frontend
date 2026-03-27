@@ -1,7 +1,8 @@
+// CartContext.tsx
 "use client";
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type CartItem = {
+export type CartItem = {
   id: string;
   title: string;
   price: number;

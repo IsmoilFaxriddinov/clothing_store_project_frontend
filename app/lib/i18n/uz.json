@@ -96,5 +96,7 @@
   "price": "Narxi",
   "quantity": "Soni",
 
+  "only_discounted": "Faqat chegirmalilar",
+  "show_all": "Hammasi",
   "error": "Xatolik"
 }

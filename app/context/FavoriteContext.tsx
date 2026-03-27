@@ -2,16 +2,20 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-interface Product {
-  category: string;
-  slug: string;
+// Page.tsx dagi product tipiga moslashtirilgan
+export interface Product {
+  id: number;
   title: string;
-  price: string;
-  discount?: string;
-  images: string[];
   description: string;
-  colors: string[];
+  price: number; // original price
+  discount_price?: number; // product discount %
+  category_discount?: number; // category discount %
+  images: string[];
+  color: string[];
   sizes: string[];
+  ages?: string[];
+  slug: string;
+  category: string;
 }
 
 interface FavoriteContextType {
@@ -26,13 +30,10 @@ export const FavoriteProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleFavorite = (product: Product) => {
     setFavorites((prev) => {
-      const exists = prev.some(
-        (p) => p.category === product.category && p.slug === product.slug
-      );
+      // Productni id orqali tekshiramiz
+      const exists = prev.some((p) => p.id === product.id);
       if (exists) {
-        return prev.filter(
-          (p) => !(p.category === product.category && p.slug === product.slug)
-        );
+        return prev.filter((p) => p.id !== product.id);
       } else {
         return [...prev, product];
       }

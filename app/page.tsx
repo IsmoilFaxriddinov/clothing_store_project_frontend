@@ -244,7 +244,7 @@ export default function Home() {
 
       {/* CATEGORIES */}
       <section className="px-6 md:px-20 py-24">
-        <h2 className="text-3xl md:text-4xl font-bold mb-12 uppercase text-gray-900 text-center">{t.categories}</h2>
+        <h2 className="text-3xl md:text-4xl font-bold mb-12 uppercase text-gray-900 text-center">{t.category}</h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8">
           {categories.map((cat) => (
