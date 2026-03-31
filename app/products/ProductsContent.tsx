@@ -11,9 +11,9 @@ type Product = {
   title: string;
   slug: string;
   category: string;
-  price?: string; 
-  discount?: string; 
-  discount_category: number; 
+  price?: string;
+  discount?: string;
+  discount_category: number;
   rating?: number;
   src?: string;
   images?: string[];
@@ -59,6 +59,8 @@ function normalizeCollectionNames(json: any): string[] {
 }
 
 // ================== FINAL PRICE FUNCTION ==================
+const ITEMS_PER_PAGE = 6;
+
 function getFinalPrice(product: Product, categoryDiscount: number) {
   if (!product.price) return undefined;
 
@@ -94,6 +96,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [onlyDiscount, setOnlyDiscount] = useState<boolean>(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [ageOptions, setAgeOptions] = useState<string[]>([]);
   const [colorOptions, setColorOptions] = useState<string[]>([]);
   const [sizeOptions, setSizeOptions] = useState<string[]>([]);
@@ -397,6 +400,18 @@ export default function ProductsPage() {
     return getPrice(b) - getPrice(a);
   });
 
+  const totalPages = Math.max(1, Math.ceil(finalProducts.length / ITEMS_PER_PAGE));
+  const currentPageIndex = Math.min(currentPage, totalPages);
+  const paginatedProducts = finalProducts.slice(
+    (currentPageIndex - 1) * ITEMS_PER_PAGE,
+    currentPageIndex * ITEMS_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <main className="bg-gradient-to-b from-pink-50 to-blue-50 min-h-screen text-gray-900 px-6 md:px-16 py-12">
@@ -423,7 +438,7 @@ export default function ProductsPage() {
         >
           {/* Search */}
           <h3 className="font-bold text-sm mb-3 text-pink-700 uppercase tracking-wide">
-            Search
+            {t.search}
           </h3>
           <input
             value={searchTerm}
@@ -600,7 +615,7 @@ export default function ProductsPage() {
 
         {/* ================== PRODUCTS GRID ================== */}
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {finalProducts.map(product => {
+          {paginatedProducts.map(product => {
             const categoryDiscountPercent = categoryDiscountMap[product.category] || 0;
             const finalDiscountedPrice = getFinalPrice(product, categoryDiscountPercent);
             const finalDiscountPercent = product.discount
@@ -685,6 +700,51 @@ export default function ProductsPage() {
           })}
         </div>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-12 flex flex-col items-center gap-4">
+          <div className="inline-flex items-center rounded-full bg-white shadow-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPageIndex === 1}
+              className="px-4 py-2 text-sm font-semibold text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, index) => {
+              const page = index + 1;
+              return (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-4 py-2 text-sm font-semibold transition ${
+                    currentPageIndex === page
+                      ? "bg-gradient-to-r from-pink-500 to-indigo-500 text-white"
+                      : "text-gray-700 hover:bg-pink-100"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={currentPageIndex === totalPages}
+              className="px-4 py-2 text-sm font-semibold text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+          <p className="text-sm text-gray-600">
+            Page {currentPageIndex} of {totalPages}
+          </p>
+        </div>
+      )}
     </main>
   );
 }
